@@ -10,12 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 
 /** Commande + nom + taille */
-public class HdfsServer { 
-
-    /** Variables */
-    final static int port = 3000;
-    final static int tailleBuff = 1024;
-    final static String separator = " ";
+public class HdfsServer {
 
     /** A thread for each client */
     private static class Slave extends Thread {
@@ -32,16 +27,17 @@ public class HdfsServer {
             InputStream inS = socket.getInputStream();
             OutputStream ouS = socket.getOutputStream();
 
-            /** Buffer */
-            byte[] buffer = new byte[tailleBuff];
-            int nbOctetsInLus = inS.read(buffer);
+            /** Buffer commande */
+
+            byte[] buf = new byte[Constants.CMD_BUFFER_SIZE];
+            int nbOctetsInLus = inS.read(buf);
 
             /** ToString + Split */
-            String message = new String (buffer, StandardCharsets.US_ASCII);
+            String message = new String (buf, StandardCharsets.US_ASCII);
 
             /** First message : command */
             System.out.println("CMD : "+message);
-            String[] args = message.trim().split(separator);
+            String[] args = message.trim().split(Constants.SEPARATOR);
             Commands cmd = Commands.fromString(args[0]);
             if (cmd != null) {
 
@@ -59,6 +55,8 @@ public class HdfsServer {
                             nameFile = args[1];
                             int sizeFile = Integer.parseInt(args[2]);
                             int nbytesTotal = 0;
+                            /** Buffer */
+                            byte[] buffer = new byte[Constants.BUFFER_SIZE];
 
                             /* Fichier crée */
                             File fichier = new File(Project.PATH + nameFile);
@@ -78,6 +76,8 @@ public class HdfsServer {
                             System.err.println("Erreur HDFS_READ Serveur : 1 argument attendu");
                         } else {
                             nameFile = args[1];
+                            /** Buffer */
+                            byte[] buffer = new byte[Constants.BUFFER_SIZE];
 
                             /* Sending file */
                             File fichier = new File(Project.PATH + nameFile);
@@ -130,7 +130,7 @@ public class HdfsServer {
 
     public static void main (String args[]) {
         try {
-            ServerSocket server = new ServerSocket(port);
+            ServerSocket server = new ServerSocket(Constants.PORT);
             while (true) {
                 Socket socket = server.accept();
                 Slave slave = new Slave(socket);

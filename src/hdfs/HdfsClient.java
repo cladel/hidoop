@@ -11,12 +11,11 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
+
 public class HdfsClient {
 
     public static final String[] ips = { "192.168.1.22", "192.168.1.57"}; // TODO ask if ip known or to be looked for
     private static final String DATAFILE_NAME = "meta";
-    public static final int PORT = 3000;
-    public static final int BUFFER_SIZE = 1024;
 
 
     private static void usage() {
@@ -208,14 +207,16 @@ public class HdfsClient {
         @Override
         public OperationResult<File> call() {
             try {
-                byte[] buf = new byte[BUFFER_SIZE];
+                byte[] buf = new byte[Constants.BUFFER_SIZE];
                 int read, total = 0;
                 FileOutputStream out = new FileOutputStream(local);
-                Socket hdfsSocket = new Socket(serverIp, PORT);
+                Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
                 OutputStream os = hdfsSocket.getOutputStream();
                 InputStream is = hdfsSocket.getInputStream();
 
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
+                cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
+
                 os.write(cmd);
 
                 while (total < chunkSize && (read = is.read(buf)) > 0) {
@@ -259,15 +260,15 @@ public class HdfsClient {
         @Override
         public OperationResult<Boolean> call() {
             try {
-                byte[] buf = new byte[BUFFER_SIZE];
+                byte[] buf = new byte[Constants.BUFFER_SIZE];
                 int read, total = 0;
                 FileInputStream in = new FileInputStream(local);
-                Socket hdfsSocket = new Socket(serverIp, PORT);
+                Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
                 OutputStream os = hdfsSocket.getOutputStream();
 
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
-                cmd = Arrays.copyOf(cmd, BUFFER_SIZE);
-                
+                cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
+
                 System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.US_ASCII));
 
                 os.write(cmd);
@@ -309,10 +310,12 @@ public class HdfsClient {
         public OperationResult<Boolean> call() {
             try {
 
-                Socket hdfsSocket = new Socket(serverIp, PORT);
+                Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
                 OutputStream os = hdfsSocket.getOutputStream();
 
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
+                cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
+
                 os.write(cmd);
 
                 os.close();
@@ -344,7 +347,6 @@ public class HdfsClient {
                     break;
                 case "-w":
                     Format.Type fmt;
-                    String fileName = args[1];
                     if (args.length > 2 && args[2].equals("-f")) {
                         if (args[3].equals("ln")) fmt = Format.Type.LINE;
                         else if (args[3].equals("kv")) fmt = Format.Type.KV;
