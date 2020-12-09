@@ -1,6 +1,8 @@
 # Ignore all :
-*
-# Except for src :
+/*
+# Except for :
+!.gitignore
+!README.md
 !src/
 !src/hdfs/
 !src/formats/
