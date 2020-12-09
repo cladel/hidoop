@@ -1,18 +1,15 @@
 /* une PROPOSITION de squelette, incomplète et adaptable... */
 
 package hdfs;
-import formats.Format;
-import formats.KV;
-import formats.KVFormat;
-import formats.LineFormat;
+import config.Project;
+
+import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
-import Command;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+
 
 /** Commande + nom + taille */
-
 public class HdfsServer { 
 
     /** Variables */
@@ -21,7 +18,7 @@ public class HdfsServer {
     final static String separator = " ";
 
     /** A thread for each client */
-    class Slave extends Thread {
+    private static class Slave extends Thread {
         Socket socket;
 
         public Slave(Socket socket) {
@@ -30,38 +27,41 @@ public class HdfsServer {
         
         public void run() {
 
+            try{
             /** Connection to HdfsClient */
             InputStream inS = socket.getInputStream();
             OutputStream ouS = socket.getOutputStream();
 
             /** Buffer */
             byte[] buffer = new byte[tailleBuff];
-            int nbOctetsInLus = inS.read(buff); 
+            int nbOctetsInLus = inS.read(buffer);
 
             /** ToString + Split */
             String message = new String (buffer, StandardCharsets.US_ASCII);
 
             /** First message : command */
-            if (message != null) {
-                String[] args = message.split(separator);
+            String[] args = message.split(separator);
+            Commands cmd = Commands.fromString(args[0]);
+            if (cmd != null) {
+
                 String nameFile;
-                int sizeFile;
+
 
                 /* Execute command */
-                switch (fromString(args[0])) {
+                switch (cmd) {
 
                     /* WRITE */
-                    case Command.HDFS_WRITE :
+                    case HDFS_WRITE :
                         if (args.length != 3) {
                             System.err.println("Erreur HDFS_WRITE Serveur : 2 arguments attendus");
                         } else {
                             nameFile = args[1];
-                            sizeFile = Interger.parseInt(args[2]);
+                            int sizeFile = Integer.parseInt(args[2]);
                             int nbytesTotal = 0;
 
                             /* Fichier crée */
                             File fichier = new File(Project.PATH + nameFile);
-                            FileOutputStream fileStream = new FileOutputStream(file);
+                            FileOutputStream fileStream = new FileOutputStream(fichier);
                             while (nbytesTotal < sizeFile && nbOctetsInLus != -1) {
                                 nbOctetsInLus = inS.read(buffer);
                                 fileStream.write(buffer, 0, nbOctetsInLus);
@@ -71,23 +71,23 @@ public class HdfsServer {
                         break;
                     
                     /* READ */
-                    case Command.HDFS_READ :
+                    case HDFS_READ :
                         if (args.length != 2) {
                             System.err.println("Erreur HDFS_READ Serveur : 1 argument attendu");
                         } else {
                             nameFile = args[1];
-                            int nbytesTotal = 0;
 
                             /* Sending file */
                             File fichier = new File(Project.PATH + nameFile);
                             
                             /* File doesn't exist */
-                            if (fichier.exist() {
+                            if (fichier.exists()) {
+                                long sizeFile = fichier.length();
                                 FileInputStream fileStream = new FileInputStream(fichier);
                                 int nbytesTotal = 0;
                                 while (nbytesTotal < sizeFile && nbOctetsInLus != -1) {
-                                    nbOctetsInLus = fileStream.read(buffer)
-                                    ouS.write(buffer, 0, nbOctetsOutLus);
+                                    nbOctetsInLus = fileStream.read(buffer);
+                                    ouS.write(buffer, 0, nbOctetsInLus);
                                     nbytesTotal +=nbOctetsInLus;
                                 }
                             }
@@ -95,7 +95,7 @@ public class HdfsServer {
                         break;
 
                     /* DELETE */
-                    case Command.HDSFS_DELETE :
+                    case HDFS_DELETE :
                         if (args.length != 2) {
                             System.err.println("Erreur HDFS_DELETE Serveur : Aucun argument attendu");
                         } else {
@@ -104,7 +104,7 @@ public class HdfsServer {
                             /* Suppression du fichier */
                             File fichier = new File(Project.PATH + nameFile);
 
-                            if (fichier.exist()) {
+                            if (fichier.exists()) {
                                 fichier.delete();
                             }
                         }
@@ -117,17 +117,24 @@ public class HdfsServer {
 
         /** Fermeture */
         socket.close();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
 
         }
     }
 
 
     public static void main (String args[]) {
-        ServerSocket server = new ServerSocket(port);
-        while(true) {
-            Socket socket = server.accept();
-            Slave slave = new Slave(socket);
-            slave.start();
+        try {
+            ServerSocket server = new ServerSocket(port);
+            while (true) {
+                Socket socket = server.accept();
+                Slave slave = new Slave(socket);
+                slave.start();
+            }
+        } catch (Exception e){
+            e.printStackTrace();
         }
     } 
 }

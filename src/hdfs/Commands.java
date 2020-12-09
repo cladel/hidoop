@@ -14,7 +14,7 @@ public enum Commands {
         return nom;
     }
 
-    public Commands fromString(String n){
+    public static Commands fromString(String n){
         switch (n){
             case "WRT" : return HDFS_WRITE;
             case "READ" : return HDFS_READ;
