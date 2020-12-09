@@ -2,3 +2,8 @@
 *
 # Except for src :
 !src/
+!src/hdfs/
+!src/formats/
+!src/application/
+!src/map/
+!src/ordo/
