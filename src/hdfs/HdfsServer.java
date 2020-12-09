@@ -40,6 +40,7 @@ public class HdfsServer {
             String message = new String (buffer, StandardCharsets.US_ASCII);
 
             /** First message : command */
+            System.out.println("CMD : "+message);
             String[] args = message.trim().split(separator);
             Commands cmd = Commands.fromString(args[0]);
             if (cmd != null) {
@@ -53,7 +54,7 @@ public class HdfsServer {
                     /* WRITE */
                     case HDFS_WRITE :
                         if (args.length != 3) {
-                            System.err.println("Erreur HDFS_WRITE Serveur : 2 arguments attendus");
+                            System.err.println("Erreur HDFS_WRITE Serveur : 2 arguments attendus, trouvés "+args.length);
                         } else {
                             nameFile = args[1];
                             int sizeFile = Integer.parseInt(args[2]);
@@ -67,6 +68,7 @@ public class HdfsServer {
                                 fileStream.write(buffer, 0, nbOctetsInLus);
                                 nbytesTotal += nbOctetsInLus;
                             }
+                            System.out.println(nameFile +" saved.");
                         }
                         break;
                     
@@ -106,6 +108,7 @@ public class HdfsServer {
 
                             if (fichier.exists()) {
                                 fichier.delete();
+                                System.out.println(nameFile +" deleted.");
                             }
                         }
                         break;

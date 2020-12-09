@@ -7,19 +7,20 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
 public class HdfsClient {
 
-    public static final String[] ips = {"192.168.1.57", "192.168.1.22"}; // TODO ask if ip known or to be looked for
+    public static final String[] ips = { "192.168.1.22", "192.168.1.57"}; // TODO ask if ip known or to be looked for
     private static final String DATAFILE_NAME = "meta";
     public static final int PORT = 3000;
     public static final int BUFFER_SIZE = 1024;
 
 
     private static void usage() {
-        System.out.println("Use: java HdfsClient [-r <file> [localDest] | -w <file> [-f ln|kv] | -d <file>]\n" +
+        System.out.println("Use: java HdfsClient [-r <file> [localDest] | -w <file> -f ln|kv | -d <file>]\n" +
                 "Currently supported formats are .kv (Key-Value) and .ln (Line).");
     }
 
@@ -217,9 +218,9 @@ public class HdfsClient {
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
                 os.write(cmd);
 
-                while (total < chunkSize && (read = is.read(buf)) != -1) {
+                while (total < chunkSize && (read = is.read(buf)) > 0) {
                     total += read;
-                    out.write(buf);
+                    out.write(buf,0,read);
                 }
 
                 is.close();
@@ -265,14 +266,17 @@ public class HdfsClient {
                 OutputStream os = hdfsSocket.getOutputStream();
 
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
-                System.out.println(new String(cmd, StandardCharsets.US_ASCII));
+                cmd = Arrays.copyOf(cmd, BUFFER_SIZE);
+                
+                System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.US_ASCII));
+
                 os.write(cmd);
 
                 in.getChannel().position(offset);
 
-                while (total < chunkSize && (read = in.read(buf)) != -1) {
+                while (total < chunkSize && (read = in.read(buf)) > 0) {
                     total += read;
-                    os.write(buf);
+                    os.write(buf,0,read);
                 }
 
                 in.close();
@@ -348,15 +352,11 @@ public class HdfsClient {
                             usage();
                             return;
                         }
+                        HdfsWrite(fmt, args[1], 1);
                     } else {
-                        if (fileName.endsWith(".ln")) fmt = Format.Type.LINE;
-                        else if (fileName.endsWith(".kv")) fmt = Format.Type.KV;
-                        else {
-                            usage();
-                            return;
-                        }
+                        usage();
                     }
-                    HdfsWrite(fmt, args[1], 1);
+
             }
         } catch (Exception ex) {
             ex.printStackTrace();
