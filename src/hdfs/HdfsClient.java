@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 
 public class HdfsClient {
 
-    public static final String[] ips = {"192.168.1.57", "192.168.1.58"}; // TODO ask if ip known or to be looked for
+    public static final String[] ips = {"192.168.1.57", "192.168.1.22"}; // TODO ask if ip known or to be looked for
     private static final String DATAFILE_NAME = "meta";
     public static final int PORT = 3000;
     public static final int BUFFER_SIZE = 1024;
@@ -265,9 +265,12 @@ public class HdfsClient {
                 OutputStream os = hdfsSocket.getOutputStream();
 
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
+                System.out.println(new String(cmd, StandardCharsets.US_ASCII));
                 os.write(cmd);
 
-                while (total < chunkSize && (read = in.read(buf, offset, chunkSize)) != -1) {
+                in.getChannel().position(offset);
+
+                while (total < chunkSize && (read = in.read(buf)) != -1) {
                     total += read;
                     os.write(buf);
                 }

@@ -21,7 +21,7 @@ public class Metadata implements Serializable {
             in.close();
             file.close();
         } else {
-            System.out.println("No metadata file found.");
+            System.out.println("No metadata file found. Running init...");
             metadata = new Metadata();
         }
         return metadata;

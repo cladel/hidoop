@@ -40,7 +40,7 @@ public class HdfsServer {
             String message = new String (buffer, StandardCharsets.US_ASCII);
 
             /** First message : command */
-            String[] args = message.split(separator);
+            String[] args = message.trim().split(separator);
             Commands cmd = Commands.fromString(args[0]);
             if (cmd != null) {
 
