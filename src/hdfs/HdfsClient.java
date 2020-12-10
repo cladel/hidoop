@@ -338,11 +338,9 @@ public class HdfsClient {
                 String line;
                 int off, len;
 
-                /// RandomAccessFile raf = new RandomAccessFile(local, "r");
                 FileInputStream in = new FileInputStream(local);
 
                 // Read chunksize bytes from source file starting from offset
-                // raf.seek(offset);
                 in.getChannel().position(offset);
                 // Skip the previous line (most likely part of line)
                 int ind = 0;
@@ -376,7 +374,7 @@ public class HdfsClient {
                             line = new String(buf, StandardCharsets.UTF_8);
                     }
 
-                    // Offset is to the char after '\n',
+                    // Offset placed next char after '\n',
                     off = ind+1;
                     len = Math.min(buf.length - ind - 1, read - ind -1);
                         // System.out.println(serverIp+" "+id+" <- skip : '"+line+"' till"+ind);
