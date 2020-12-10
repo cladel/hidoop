@@ -88,7 +88,7 @@ public class HdfsServer {
 
                                 FileInputStream fileStream = new FileInputStream(fichier);
                                 while ((nbOctetsInLus = fileStream.read(buffer)) != -1) {
-                                    ;
+
                                     ouS.write(buffer, 0, nbOctetsInLus);
 
                                 }

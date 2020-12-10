@@ -333,7 +333,7 @@ public class HdfsClient {
             try {
                 int sz = (long)Constants.BUFFER_SIZE > chunkSize ? (int) chunkSize : Constants.BUFFER_SIZE;
                 byte[] buf = new byte[sz];
-                int read = 0, total = 0;
+                int read, total = 0;
 
                 String line;
                 int off, len;
@@ -374,11 +374,13 @@ public class HdfsClient {
 
                     } while ((ind = line.indexOf("\n")) == -1);
 
+                    System.out.println(serverIp+" "+id+" <- dbg : '"+ind+"'"+read);
+
                     // End of the previous line was found at index ind
                     // Offset placed to next character
                     off = ind+1;
-                    len = Math.min(buf.length - ind - 1, read - ind -1);
-                        // System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind)+"'");
+                    len = Math.min(buf.length - ind - 1, read - ind - 1);
+                    System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind+1)+"'");
 
                 } else {
                     // Read a first time
@@ -399,8 +401,13 @@ public class HdfsClient {
                     len = read;
                     off = 0;
                 }
+
+                System.out.println(serverIp+" "+id+" <- dbg2 : '"+ind+"'"+read);
                 // Write the end of the line if EOF is not reached
-                if (read > 0) os.write(buf, 0, ind+1);
+                if (read > 0){
+                    os.write(buf, 0, ind+1);
+                    System.out.println(serverIp+" "+id+" <- end : '"+line.substring(0,ind)+"'");
+                }
 
                 // Close file and connection
                 in.close();
