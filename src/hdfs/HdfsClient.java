@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
-
 public class HdfsClient {
 
     public static final String[] SERVERS_IP = { "192.168.1.57" }; // Liste des ip des HdfsServer

@@ -1,6 +1,7 @@
 # Ignore :
 /*
 /src/config/
+*.class
 
 # Except for :
 !.gitignore
