@@ -1,5 +1,7 @@
-# Ignore all :
+# Ignore :
 /*
+/src/config/
+
 # Except for :
 !.gitignore
 !README.md
@@ -9,3 +11,4 @@
 !src/application/
 !src/map/
 !src/ordo/
+

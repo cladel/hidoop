@@ -6,6 +6,7 @@ import config.Project;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.BufferOverflowException;
 import java.nio.charset.StandardCharsets;
 
 
@@ -33,7 +34,7 @@ public class HdfsServer {
             int nbOctetsInLus = inS.read(buf);
 
             /** ToString + Split */
-            String message = new String (buf, StandardCharsets.US_ASCII);
+            String message = new String (buf, StandardCharsets.UTF_8);
 
             /** First message : command */
             System.out.println("CMD : "+message);
@@ -61,10 +62,11 @@ public class HdfsServer {
                             /* Fichier crée */
                             File fichier = new File(Project.PATH + nameFile);
                             FileOutputStream fileStream = new FileOutputStream(fichier);
-                            while (nbytesTotal < sizeFile && nbOctetsInLus != -1) {
-                                nbOctetsInLus = inS.read(buffer);
+                            while ((nbOctetsInLus = inS.read(buffer)) != -1) {
+
                                 fileStream.write(buffer, 0, nbOctetsInLus);
                                 nbytesTotal += nbOctetsInLus;
+                            //    if (nbytesTotal > 100000000) throw new BufferOverflowException(); //TODO
                             }
                             System.out.println(nameFile +" saved.");
                         }
@@ -84,13 +86,12 @@ public class HdfsServer {
                             
                             /* File doesn't exist */
                             if (fichier.exists()) {
-                                long sizeFile = fichier.length();
+
                                 FileInputStream fileStream = new FileInputStream(fichier);
-                                int nbytesTotal = 0;
-                                while (nbytesTotal < sizeFile && nbOctetsInLus != -1) {
-                                    nbOctetsInLus = fileStream.read(buffer);
+                                while ((nbOctetsInLus = fileStream.read(buffer)) != -1) {
+                                    ;
                                     ouS.write(buffer, 0, nbOctetsInLus);
-                                    nbytesTotal +=nbOctetsInLus;
+
                                 }
                             }
                         }
@@ -114,7 +115,7 @@ public class HdfsServer {
                         break;
 
                     /* Wrong Command */
-                    default : System.err.println("Bad message");
+                    default : System.err.println("Bad message: "+cmd);
                 }
             }
 

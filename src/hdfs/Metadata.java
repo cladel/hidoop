@@ -1,11 +1,14 @@
 package hdfs;
 
 import java.io.*;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
+/**
+ * HDFS metadata, list of data for all the files currently stored
+ * in the file system
+ */
 public class Metadata implements Serializable {
-    public static final long versionID = 1L;
+    public static final long serialVersionUID = 1L;
 
 
     private Date saveDate;
@@ -21,7 +24,7 @@ public class Metadata implements Serializable {
             in.close();
             file.close();
         } else {
-            System.out.println("No metadata file found. Running init...");
+            System.out.println("No metadata file found. Creating new file...");
             metadata = new Metadata();
         }
         return metadata;
@@ -53,6 +56,15 @@ public class Metadata implements Serializable {
 
     public FileData retrieveFileData(String name){
         return files.get(name);
+    }
+
+
+    public int getFileCount(){
+        return files.size();
+    }
+
+    public Set<String> getFileNames() {
+        return files.keySet();
     }
 
     public Date getSaveDate() {

@@ -1,5 +1,9 @@
 package hdfs;
 
+
+/**
+ * TCP commands sent to HdfsServer
+ */
 public enum Commands {
     HDFS_WRITE("WRT"),
     HDFS_READ("READ"),

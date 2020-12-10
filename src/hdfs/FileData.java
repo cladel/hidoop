@@ -5,25 +5,28 @@ import formats.Format;
 import java.io.Serializable;
 import java.util.*;
 
+/**
+ * HDFS file data, including the location of the server(s) where a chunk
+ * is stored
+ */
 public class FileData implements Serializable{
-    public static final long versionID = Metadata.versionID;
+    public static final long serialVersionUID = Metadata.serialVersionUID;
 
-    private long fileSize;
-    private int chunkSize;
+    private long fileSize; // file size in bytes
+    private long chunkSize; // chunks size in bytes
     private int rep = 1;
     private Format.Type format;
     private HashMap<Integer,ChunkSources> chunks;
-    private int lastChunkId; // TODO pour gestion de l'append
 
 
-    public FileData(Format.Type fmt, long size, int chunkSize){
+    public FileData(Format.Type fmt, long size, long chunkSize){
         this.format = fmt;
         this.fileSize = size;
         this.chunkSize = chunkSize;
         this.chunks = new HashMap<>();
     }
 
-    public int getChunkSize() {
+    public long getChunkSize() {
         return chunkSize;
     }
 
@@ -55,16 +58,23 @@ public class FileData implements Serializable{
         return chunks.size();
     }
 
-    public Set<Integer> getChunksIds() {
-        return chunks.keySet();
+    public ArrayList<Integer> getChunksIds() {
+        ArrayList<Integer> idsList = new ArrayList<>(chunks.keySet());
+        Collections.sort(idsList);
+        return idsList;
     }
 
     public List<String> getSourcesForChunk(int id){
         return Collections.unmodifiableList(chunks.get(id).ipList);
     }
 
+    public static String chunkName(int id, String fname, Format.Type fmt){
+        return id + "_" + fname + (fmt == Format.Type.KV ? ".kv" : ".ln");
+    }
 
-    private class ChunkSources implements Serializable{
+
+    private class ChunkSources implements Serializable {
+        public static final long serialVersionUID = Metadata.serialVersionUID;
         private final ArrayList<String> ipList;
 
         ChunkSources(){
