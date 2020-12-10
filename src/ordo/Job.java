@@ -14,8 +14,7 @@ public class Job implements JobInterface{
     static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
     static int port[] = {2001, 2002, 2003};
 
-    public Job(){
-    }
+    public Job(){ }
 
     @Override
     public void setInputFormat(Format.Type ft) {
@@ -29,6 +28,7 @@ public class Job implements JobInterface{
 
     @Override
     public void startJob(MapReduce mr) {
+
         try {
             CallBackImpl cb = new CallBackImpl(server.length);
 

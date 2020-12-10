@@ -20,7 +20,8 @@ public class HdfsClient {
     private static void usage() {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
                 "| -w <file> -f ln|kv [ --chunks-size=<sizeInBytes>|distributed ] [ --rep=<repFactor> ] " +
-                "| -d <file> }\n");
+                "| -d <file> " +
+                "| -l }\n");
     }
 
 
@@ -475,7 +476,7 @@ public class HdfsClient {
     public static void main(String[] args) {
 
         try {
-            if (args.length < 2) {
+            if (args.length < 1) {
                 usage();
                 return;
             }
