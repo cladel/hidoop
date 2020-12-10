@@ -6,7 +6,6 @@ import config.Project;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.BufferOverflowException;
 import java.nio.charset.StandardCharsets;
 
 
@@ -66,7 +65,7 @@ public class HdfsServer {
 
                                 fileStream.write(buffer, 0, nbOctetsInLus);
                                 nbytesTotal += nbOctetsInLus;
-                            //    if (nbytesTotal > 100000000) throw new BufferOverflowException(); //TODO
+                            //    if (nbytesTotal > 100000000) throw new ; //TODO
                             }
                             System.out.println(nameFile +" saved.");
                         }

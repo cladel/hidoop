@@ -355,29 +355,30 @@ public class HdfsClient {
                 // System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.UTF_8));
                 os.write(cmd);
 
-                if (offset > 0) {
-                    // Read a fist time to skip the previous line
-                    read = in.read(buf);
-                    line = new String(buf, StandardCharsets.UTF_8);
-                    total = read;
+                /* Send chunk content */
 
-                    // Keep reading while no new line is found
-                    while ((ind = line.indexOf("\n")) == -1){
-                        // we're beyond the end of the file, no need to create an empty chunk
+                // If this is not the first chunk, then skip the end of the previous line
+                // Else read from 0
+                if (offset > 0) {
+                    // Read a fist time to skip the previous line and keep reading while no new line is found
+                    do {
+                        read = in.read(buf);
+                        // End of the file reached, no need to create an empty chunk
                         //TODO replace boolean with better info
                         if (read <= 0) {
                             in.close();
                             return new OperationResult<>(id, serverIp, false);
                         }
-                            read = in.read(buf);
-                            total += read;
-                            line = new String(buf, StandardCharsets.UTF_8);
-                    }
+                        line = new String(buf, StandardCharsets.UTF_8);
+                        total += read;
 
-                    // Offset placed next char after '\n',
+                    } while ((ind = line.indexOf("\n")) == -1);
+
+                    // End of the previous line was found at index ind
+                    // Offset placed to next character
                     off = ind+1;
                     len = Math.min(buf.length - ind - 1, read - ind -1);
-                        // System.out.println(serverIp+" "+id+" <- skip : '"+line+"' till"+ind);
+                        // System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind)+"'");
 
                 } else {
                     // Read a first time
@@ -389,7 +390,7 @@ public class HdfsClient {
 
                 }
 
-                // Write and read while it's not the end of the file and the chunk or the line is not over
+                // Write and read while end of file is not reached and while the chunk or the line is not over
                 while (read > 0 && (total <= chunkSize || (ind = line.indexOf("\n")) == -1)) {
                     os.write(buf, off, len);
                     read = in.read(buf);
@@ -398,10 +399,10 @@ public class HdfsClient {
                     len = read;
                     off = 0;
                 }
-                // Write the end of the line if the file isn't over
+                // Write the end of the line if EOF is not reached
                 if (read > 0) os.write(buf, 0, ind+1);
 
-                // Close the file and the connection
+                // Close file and connection
                 in.close();
                 os.close();
                 hdfsSocket.close();
@@ -494,7 +495,7 @@ public class HdfsClient {
                             else chunksMode = Long.parseLong(mode);
                         } else {
                             // Default value
-                            // TODO this is for testing, later set at distrib
+                            // TODO this value is for testing
                             chunksMode = 150;
                         }
                         HdfsWrite(fmt, args[1], 1, chunksMode);
