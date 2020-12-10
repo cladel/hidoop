@@ -327,6 +327,15 @@ public class HdfsClient {
             this.id = id;
         }
 
+        private int nextFL(byte[] array){
+            int i = 0;
+            while (i < array.length){
+                if (array[i] == 0x0a) return i;
+                i++;
+            }
+            return -1;
+        }
+
 
         @Override
         public OperationResult<Boolean> call() {
@@ -335,15 +344,12 @@ public class HdfsClient {
                 byte[] buf = new byte[sz];
                 int read, total = 0;
 
-                String line;
-                int off, len;
+                int off, len, ind = 0;
 
                 FileInputStream in = new FileInputStream(local);
 
                 // Read chunksize bytes from source file starting from offset
                 in.getChannel().position(offset);
-                // Skip the previous line (most likely part of line)
-                int ind = 0;
 
                 // Init socket connection
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
@@ -369,44 +375,39 @@ public class HdfsClient {
                             in.close();
                             return new OperationResult<>(id, serverIp, false);
                         }
-                        line = new String(buf, StandardCharsets.UTF_8);
                         total += read;
 
-                    } while ((ind = line.indexOf("\n")) == -1);
+                    } while ((ind = nextFL(buf)) == -1);
 
-                    System.out.println(serverIp+" "+id+" <- dbg : '"+ind+"'"+read);
 
                     // End of the previous line was found at index ind
                     // Offset placed to next character
                     off = ind+1;
                     len = Math.min(buf.length - ind - 1, read - ind - 1);
-                    System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind+1)+"'");
+                        //System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind+1)+"'");
 
                 } else {
                     // Read a first time
                     read = in.read(buf);
                     total += read;
-                    line = new String(buf, StandardCharsets.UTF_8);
                     len = read;
                     off = 0;
 
                 }
 
                 // Write and read while end of file is not reached and while the chunk or the line is not over
-                while (read > 0 && (total <= chunkSize || (ind = line.indexOf("\n")) == -1)) {
+                while (read > 0 && (total <= chunkSize || (ind = nextFL(buf)) == -1)) {
                     os.write(buf, off, len);
                     read = in.read(buf);
                     total += read;
-                    line = new String(buf, StandardCharsets.UTF_8);
                     len = read;
                     off = 0;
                 }
 
-                System.out.println(serverIp+" "+id+" <- dbg2 : '"+ind+"'"+read);
+
                 // Write the end of the line if EOF is not reached
                 if (read > 0){
                     os.write(buf, 0, ind+1);
-                    System.out.println(serverIp+" "+id+" <- end : '"+line.substring(0,ind)+"'");
                 }
 
                 // Close file and connection
