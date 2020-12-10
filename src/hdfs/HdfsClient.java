@@ -59,7 +59,7 @@ public class HdfsClient {
             fd = new FileData(fmt, size, chunkSize);
 
         } else {
-            // TODO append?
+            // TODO append possible?
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
 
@@ -92,7 +92,7 @@ public class HdfsClient {
         // Check success and add metadata
         for (Future<OperationResult<Boolean>> b : results) {
             OperationResult<Boolean> res = b.get();
-            boolean ok = res.getOk();
+            boolean ok = res.getRes();
             if (ok) fd.addChunkHandle(res.getId(), res.getIpSource());
             else {
                 //TODO
@@ -141,7 +141,7 @@ public class HdfsClient {
         for (int id : fd.getChunksIds()) {
             String ip = fd.getSourcesForChunk(id).get(0); // Get(0) since rep=1
             chunkName = FileData.chunkName(id, hdfsFname, fd.getFormat());
-            Future<OperationResult<File>> b = pool.submit(new Read(chunkName, id, ip, fd.getChunkSize()));
+            Future<OperationResult<File>> b = pool.submit(new Read(chunkName, id, ip));
             results.add(b);
 
         }
@@ -151,7 +151,7 @@ public class HdfsClient {
         FileInputStream in;
         for (Future<OperationResult<File>> b : results) {
             OperationResult<File> res = b.get();
-            File tmp = res.getOk();
+            File tmp = res.getRes();
             if (tmp != null) {
                 in = new FileInputStream(tmp);
                 byte[] a = in.readAllBytes();
@@ -202,7 +202,7 @@ public class HdfsClient {
 
         for (Future<OperationResult<Boolean>> b : results) {
             OperationResult<Boolean> res = b.get();
-            boolean ok = res.getOk();
+            boolean ok = res.getRes();
             if (!ok) {
                 //TODO
                 System.err.println("Something went wrong with "+res.getId());
@@ -226,12 +226,12 @@ public class HdfsClient {
     private static class OperationResult<T> {
         private final int id;
         private final String ipSource;
-        private final T ok;
+        private final T res;
 
-        private OperationResult(int id, String ipSource, T ok) {
+        private OperationResult(int id, String ipSource, T res) {
             this.id = id;
             this.ipSource = ipSource;
-            this.ok = ok;
+            this.res = res;
         }
 
         public int getId() {
@@ -242,8 +242,8 @@ public class HdfsClient {
             return ipSource;
         }
 
-        public T getOk() {
-            return ok;
+        public T getRes() {
+            return res;
         }
     }
 
@@ -255,10 +255,9 @@ public class HdfsClient {
         private final File local;
         private final String serverIp;
         private final int id;
-        private final long chunkSize;
 
 
-        public Read(String name, int id, String serverIp, long chunkSize) throws IOException {
+        public Read(String name, int id, String serverIp) throws IOException {
             this.command = Commands.HDFS_READ.toString() + " " + name;
             String tmpName = name + ".tmp";
             this.local = new File(Project.PATH+tmpName);
@@ -266,7 +265,6 @@ public class HdfsClient {
             local.createNewFile();
             this.serverIp = serverIp;
             this.id = id;
-            this.chunkSize = chunkSize;
         }
 
 
@@ -327,7 +325,12 @@ public class HdfsClient {
             this.id = id;
         }
 
-        private int nextFL(byte[] array){
+        /**
+         * Find next '\n' in an array of bytes
+         * @param array characters as array of bytes
+         * @return index of first occurence of '\n', or -1 if not found
+         */
+        private int nextLF(byte[] array){
             int i = 0;
             while (i < array.length){
                 if (array[i] == 0x0a) return i;
@@ -377,7 +380,7 @@ public class HdfsClient {
                         }
                         total += read;
 
-                    } while ((ind = nextFL(buf)) == -1);
+                    } while ((ind = nextLF(buf)) == -1);
 
 
                     // End of the previous line was found at index ind
@@ -396,7 +399,7 @@ public class HdfsClient {
                 }
 
                 // Write and read while end of file is not reached and while the chunk or the line is not over
-                while (read > 0 && (total <= chunkSize || (ind = nextFL(buf)) == -1)) {
+                while (read > 0 && (total <= chunkSize || (ind = nextLF(buf)) == -1)) {
                     os.write(buf, off, len);
                     read = in.read(buf);
                     total += read;
