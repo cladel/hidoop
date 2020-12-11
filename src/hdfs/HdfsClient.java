@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 public class HdfsClient {
 
     public static final String[] SERVERS_IP = { "192.168.1.57" }; // Liste des ip des HdfsServer
-    private static final String DATAFILE_NAME = "meta"; // nom du fichier de métadonnées
+    public static final String DATAFILE_NAME = "meta"; // nom du fichier de métadonnées
 
 
     private static void usage() {
