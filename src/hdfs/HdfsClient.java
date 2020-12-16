@@ -13,7 +13,7 @@ import java.util.concurrent.*;
 
 public class HdfsClient {
 
-    public static final String[] SERVERS_IP = { "192.168.1.57" }; // Liste des ip des HdfsServer
+    public static final String[] SERVERS_IP = { "localhost" }; // Liste des ip des HdfsServer
     public static final String DATAFILE_NAME = "meta"; // nom du fichier de métadonnées
 
 
@@ -480,6 +480,7 @@ public class HdfsClient {
                 usage();
                 return;
             }
+            long debut = System.nanoTime();
             switch (args[0]) {
                 case "-l":
                     HdfsList();
@@ -502,6 +503,7 @@ public class HdfsClient {
                         long chunksMode;
                         if (args.length == 5 && args[4].startsWith("--chunks-size=")){
                             String mode = args[4].substring("--chunks-size=".length());
+                            System.out.println(mode);
                             if (mode.equals("distributed")) chunksMode = -1;
                             else chunksMode = Long.parseLong(mode);
                         } else {
@@ -515,6 +517,8 @@ public class HdfsClient {
                     }
 
             }
+            long fin = System.nanoTime();
+            System.out.println("Durée exécution: " + (fin-debut)/1000000L);
         } catch (FileNotFoundException | FileAlreadyExistsException ferr){
             System.err.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
         } catch (Exception ex) {
