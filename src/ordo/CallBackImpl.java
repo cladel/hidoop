@@ -9,14 +9,14 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CallBackImpl extends UnicastRemoteObject implements CallBack {
 
     private final ReentrantLock moniteur;
-    private final Condition signal;
+    private final Condition jobAttente;
     private final int nbNoeuds;
     private final Condition noeudAttente;
 
     public CallBackImpl(int nbNoeuds) throws RemoteException {
         this.nbNoeuds = nbNoeuds;
         this.moniteur = new ReentrantLock();
-        this.signal = this.moniteur.newCondition();
+        this.jobAttente = this.moniteur.newCondition();
         this.noeudAttente = this.moniteur.newCondition();
     }
 
@@ -25,7 +25,7 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
         int i = nbNoeuds;
         while (i > 0){
             noeudAttente.signal();
-            signal.await();
+            jobAttente.await();
             i--;
             System.out.println(i + " Signaux en attente");
         }
@@ -35,14 +35,14 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
 
     public void reveiller() throws RemoteException {
         moniteur.lock();
-        while (!moniteur.hasWaiters(signal)){
+        while (!moniteur.hasWaiters(jobAttente)){
             try {
                 noeudAttente.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-        signal.signal();
+        jobAttente.signal();
         moniteur.unlock();
     }
 }
