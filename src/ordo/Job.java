@@ -40,7 +40,7 @@ public class Job implements JobInterface{
             Format frReduce;
             Format fwReduce;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
-                                                 // l'output est obligatoirement l'autre
+                                                 // l'output est obligatoirement le même
                 frReduce = new KVFormat(fName + "-tot");
                 fwReduce = new KVFormat(fName + "-res");
             } else {
