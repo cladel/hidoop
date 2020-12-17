@@ -1,5 +1,3 @@
-/* une PROPOSITION de squelette, incomplète et adaptable... */
-
 package hdfs;
 import config.Project;
 
@@ -30,7 +28,7 @@ public class HdfsServer {
             /** Buffer commande */
 
             byte[] buf = new byte[Constants.CMD_BUFFER_SIZE];
-            int nbOctetsInLus = inS.read(buf);
+            int nbOctetsInLus = inS.read(buf);;
 
             /** ToString + Split */
             String message = new String (buf, StandardCharsets.UTF_8);
@@ -67,7 +65,10 @@ public class HdfsServer {
                                 nbytesTotal += nbOctetsInLus;
                             //    if (nbytesTotal > 100000000) throw new ; //TODO
                             }
-                            System.out.println(nameFile +" saved.");
+                            if (nbytesTotal > 0)
+                                System.out.println(nameFile +" saved.");
+                            else
+                               fichier.delete();
                         }
                         break;
                     

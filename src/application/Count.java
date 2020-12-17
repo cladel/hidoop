@@ -7,17 +7,13 @@ package application;
 
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
 
-//import config.Project;
-import formats.KV;
+import config.Project;
 
 public class Count {
 
@@ -37,7 +33,7 @@ public class Count {
                     else hm.put(tok, 1);
                 }
             }
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("count-res")));
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(Project.PATH+"count-res")));
             for (String k : hm.keySet()) {
                 writer.write(k+"<->"+hm.get(k).toString());
                 writer.newLine();
