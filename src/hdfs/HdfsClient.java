@@ -70,7 +70,7 @@ public class HdfsClient {
         if (chunkSize <= 0) chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
 
         // Count chunks
-        int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
+        int count = (int) ((long)(size / chunkSize)) + (size % chunkSize == 0 ? 0 : 1);
 
         System.out.println("Splitting file in "+count+" chunks...");
 
@@ -340,10 +340,12 @@ public class HdfsClient {
         /**
          * Find next '\n' in an array of bytes
          * @param array characters as array of bytes
+         * @param startAt ignore bytes before this index
          * @return index of first occurrence of '\n', or -1 if not found
          */
-        private int nextLF(byte[] array){
-            for (int i=0;i < array.length;i++){
+        private int nextLF(byte[] array, int startAt){
+            if (startAt >= array.length) return -1;
+            for (int i=startAt;i < array.length;i++){
                 if (array[i] == 0x0a) return i;
             }
             return -1;
@@ -355,9 +357,9 @@ public class HdfsClient {
             try {
                 int sz = (long)Constants.BUFFER_SIZE > chunkSize ? (int) chunkSize : Constants.BUFFER_SIZE;
                 byte[] buf = new byte[sz];
-                int read, total = 0;
+                long total = 0;
 
-                int off, len, ind = 0;
+                int read, off, len, ind = 0;
 
                 FileInputStream in = new FileInputStream(local);
 
@@ -390,12 +392,13 @@ public class HdfsClient {
                         }
                         total += read;
 
-                    } while ((ind = nextLF(buf)) == -1);
+                    } while ((ind = nextLF(buf, 0)) == -1);
 
 
                     // End of the previous line was found at index ind
                     // Offset placed to next character
                     off = ind+1;
+
                     len = Math.min(buf.length - ind - 1, read - ind - 1);
                         //System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind+1)+"'");
 
@@ -409,7 +412,7 @@ public class HdfsClient {
                 }
 
                 // Write and read while end of file is not reached and while the chunk or the line is not over
-                while (read > 0 && (total <= chunkSize || (ind = nextLF(buf)) == -1)) {
+                while (read > 0 && (total <= chunkSize ||(ind = nextLF(buf, (int)(read - (total - chunkSize)))) == -1)) {
                     os.write(buf, off, len);
                     read = in.read(buf);
                     total += read;
@@ -517,7 +520,7 @@ public class HdfsClient {
                     long chunksMode = -1;
                     int next = 2;
                     int rep = 1;
-                    while (args.length > next + 1){
+                    while (args.length > next){
 
                         if (args[next].equals("-f")) {
                             boolean correct_size = args.length > next + 1;
@@ -532,7 +535,6 @@ public class HdfsClient {
                             String mode = args[next].substring("--chunks-size=".length());
                             if (mode.equals("distributed")) chunksMode = -1;
                             else if(mode.matches("[-]?[0-9]+")) chunksMode = Long.parseLong(mode);
-
                             next++;
                         } else if (args[next].startsWith("--rep=")){
                             String r = args[next].substring("--rep=".length());
