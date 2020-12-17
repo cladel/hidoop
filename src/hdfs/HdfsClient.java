@@ -167,7 +167,6 @@ public class HdfsClient {
                     out.write(buf,0,read);
                 }
 
-                out.write(buf);
                 in.close();
                 tmp.delete();
             }
@@ -520,7 +519,7 @@ public class HdfsClient {
                     int rep = 1;
                     while (args.length > next + 1){
 
-                        if (args[next].equals("f")) {
+                        if (args[next].equals("-f")) {
                             boolean correct_size = args.length > next + 1;
                             if (correct_size && args[next + 1].equals("ln")) fmt = Format.Type.LINE;
                             else if (correct_size && args[next + 1].equals("kv")) fmt = Format.Type.KV;

@@ -2,9 +2,10 @@ Projet **HIDOOP**
 -------------------------------
 Contenu : 
 - fichiers sources sauf *config/Project.java*, cette classe servant uniquement à la définition d'une variable statique ***PATH*** indiquant le répertoire des fichiers d'Hidoop.
+- Rapports intermédiaires
 
 ##### Configuration de Hidoop
-La configuration se fait via un fichier *conf.xml* placé dans le répertoire poité par ***PATH***.
+La configuration se fait via un fichier *conf.xml* placé dans le répertoire pointé par ***PATH***.
 Un fichier d'exemple est donné ci-dessous :
 
     <?xml version="1.0" encoding="UTF-8"?>

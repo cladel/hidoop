@@ -24,7 +24,7 @@ public class Loader {
 
     /**
      * Loads configuration (servers nodes and metadata) into memory
-     * @return Metadata informations
+     * @return Metadata informations (since we always need them)
      */
     public static Metadata loadConfigAndMeta() throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
