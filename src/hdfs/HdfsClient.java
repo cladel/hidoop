@@ -94,9 +94,11 @@ public class HdfsClient {
         }
 
         // Check success and add metadata
+        boolean allOk = true;
         for (Future<OperationResult<Boolean>> b : results) {
             OperationResult<Boolean> res = b.get();
             boolean ok = res.getRes();
+            allOk &= ok;
             if (ok) fd.addChunkHandle(res.getId(), res.getIpSource());
             else {
                 //TODO
@@ -107,8 +109,10 @@ public class HdfsClient {
         pool.shutdown();
 
         // Save updated metadata
-        if (isNew) data.addFileData(localFSSourceFname, fd);
-        Metadata.save(new File(Project.PATH+ DATAFILE_NAME), data);
+        if (allOk) {
+            if (isNew) data.addFileData(localFSSourceFname, fd);
+            Metadata.save(new File(Project.PATH + DATAFILE_NAME), data);
+        }
 
         System.out.println(localFSSourceFname + " successfully saved.");
 
@@ -155,6 +159,7 @@ public class HdfsClient {
         FileInputStream in;
         byte[] buf = new byte[Constants.BUFFER_SIZE];
         int read;
+
         for (Future<OperationResult<File>> b : results) {
             OperationResult<File> res = b.get();
             File tmp = res.getRes();
@@ -207,10 +212,11 @@ public class HdfsClient {
             results.add(b);
 
         }
-
+        boolean allOk = true;
         for (Future<OperationResult<Boolean>> b : results) {
             OperationResult<Boolean> res = b.get();
             boolean ok = res.getRes();
+            allOk &= ok;
             if (!ok) {
                 //TODO
                 System.err.println("Something went wrong with "+res.getId());
@@ -220,9 +226,11 @@ public class HdfsClient {
         pool.shutdown();
 
         // Save updated metadata
-        data.removeFileData(hdfsFname);
-        Metadata.save(new File(Project.PATH+ DATAFILE_NAME), data);
-        System.out.println(hdfsFname + " successfully deleted.");
+        if (allOk) {
+            data.removeFileData(hdfsFname);
+            Metadata.save(new File(Project.PATH + DATAFILE_NAME), data);
+            System.out.println(hdfsFname + " successfully deleted.");
+        }
 
     }
 
@@ -486,17 +494,20 @@ public class HdfsClient {
                 usage();
                 return;
             }
-            long start = System.currentTimeMillis();
+            long start;
             switch (args[0]) {
                 case "-l":
+                    start = System.currentTimeMillis();
                     HdfsList();
                     System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
+                    start = System.currentTimeMillis();
                     HdfsRead(args[1], args.length > 2 ? args[2] : null);
                     System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-d":
+                    start = System.currentTimeMillis();
                     HdfsDelete(args[1]);
                     System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
@@ -537,6 +548,7 @@ public class HdfsClient {
 
                     }
                     // Ignoring rep for now
+                    start = System.currentTimeMillis();
                     HdfsWrite(fmt, args[1], 1, chunksMode);
                     System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
