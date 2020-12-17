@@ -7,27 +7,31 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
 public class HdfsClient {
 
-    public static final String[] SERVERS_IP = { "localhost" }; // Liste des ip des HdfsServer
+    public static final String[] SERVERS_IP = { "127.0.0.1", "127.0.0.1", "127.0.0.1" }; // Liste des ip des HdfsServer
     public static final String DATAFILE_NAME = "meta"; // nom du fichier de métadonnées
 
 
     private static void usage() {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
-                "| -w <file> -f ln|kv [ --chunks-size=<sizeInBytes>|distributed ] [ --rep=<repFactor> ] " +
+                "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes>|distributed ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
-                "| -l }\n");
+                "| -l }\n"+
+                "--rep is currently not supported and is always 1.");
     }
 
 
     public static void HdfsList() throws IOException, ClassNotFoundException {
         Metadata data = Metadata.load(new File(Project.PATH+ DATAFILE_NAME));
-        System.out.println(data.getFileCount()+ " saved :");
+        DateFormat df = new SimpleDateFormat();
+        System.out.println(data.getFileCount()+ " saved (" + df.format(data.getSaveDate())+") :");
         for (String n : data.getFileNames()){
             System.out.println("    - "+n);
         }
@@ -36,7 +40,7 @@ public class HdfsClient {
 
     /**
      * Write a file in HDFS
-     * @param fmt format of the file (kv or ln)
+     * @param fmt format of the file (KEY or LINE)
      * @param localFSSourceFname local file to add into HDFS
      * @param repFactor number of copy of the same chunk
      * @param chunkSize approached size of the chunks (a chunk may be a little larger/smaller since
@@ -149,14 +153,18 @@ public class HdfsClient {
         // Append all tmp files in order
         FileOutputStream out = new FileOutputStream(local);
         FileInputStream in;
+        byte[] buf = new byte[Constants.BUFFER_SIZE];
+        int read;
         for (Future<OperationResult<File>> b : results) {
             OperationResult<File> res = b.get();
             File tmp = res.getRes();
             if (tmp != null) {
                 in = new FileInputStream(tmp);
-                byte[] a = in.readAllBytes();
-                //System.out.println(new String(a, StandardCharsets.UTF_8));
-                out.write(a);
+                while ((read = in.read(buf)) > 0) {
+                    out.write(buf,0,read);
+                }
+
+                out.write(buf);
                 in.close();
                 tmp.delete();
             }
@@ -328,13 +336,11 @@ public class HdfsClient {
         /**
          * Find next '\n' in an array of bytes
          * @param array characters as array of bytes
-         * @return index of first occurence of '\n', or -1 if not found
+         * @return index of first occurrence of '\n', or -1 if not found
          */
         private int nextLF(byte[] array){
-            int i = 0;
-            while (i < array.length){
+            for (int i=0;i < array.length;i++){
                 if (array[i] == 0x0a) return i;
-                i++;
             }
             return -1;
         }
@@ -408,7 +414,7 @@ public class HdfsClient {
                 }
 
 
-                // Write the end of the line if EOF is not reached
+                // Write the end of the line if EOF was not reached
                 if (read > 0){
                     os.write(buf, 0, ind+1);
                 }
@@ -480,45 +486,62 @@ public class HdfsClient {
                 usage();
                 return;
             }
-            long debut = System.nanoTime();
+            long start = System.currentTimeMillis();
             switch (args[0]) {
                 case "-l":
                     HdfsList();
+                    System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
                     HdfsRead(args[1], args.length > 2 ? args[2] : null);
+                    System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-d":
                     HdfsDelete(args[1]);
+                    System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-w":
-                    Format.Type fmt;
-                    if (args.length > 2 && args[2].equals("-f")) {
-                        if (args[3].equals("ln")) fmt = Format.Type.LINE;
-                        else if (args[3].equals("kv")) fmt = Format.Type.KV;
-                        else {
+                    Format.Type fmt = Format.Type.LINE;
+                    long chunksMode = -1;
+                    int next = 2;
+                    int rep = 1;
+                    while (args.length > next + 1){
+
+                        if (args[next].equals("f")) {
+                            boolean correct_size = args.length > next + 1;
+                            if (correct_size && args[next + 1].equals("ln")) fmt = Format.Type.LINE;
+                            else if (correct_size && args[next + 1].equals("kv")) fmt = Format.Type.KV;
+                            else {
+                                usage();
+                                return;
+                            }
+                            next += 2;
+                        } else if (args[next].startsWith("--chunks-size=")) {
+                            String mode = args[next].substring("--chunks-size=".length());
+                            if (mode.equals("distributed")) chunksMode = -1;
+                            else if(mode.matches("[-]?[0-9]+")) chunksMode = Long.parseLong(mode);
+
+                            next++;
+                        } else if (args[next].startsWith("--rep=")){
+                            String r = args[next].substring("--rep=".length());
+                            if(r.matches("[0-9]+")) rep = Integer.parseInt(r);
+                            else {
+                                usage();
+                                return;
+                            }
+                            next++;
+                        } else {
                             usage();
                             return;
                         }
-                        long chunksMode;
-                        if (args.length == 5 && args[4].startsWith("--chunks-size=")){
-                            String mode = args[4].substring("--chunks-size=".length());
-                            System.out.println(mode);
-                            if (mode.equals("distributed")) chunksMode = -1;
-                            else chunksMode = Long.parseLong(mode);
-                        } else {
-                            // Default value
-                            // TODO this value is for testing
-                            chunksMode = 150;
-                        }
-                        HdfsWrite(fmt, args[1], 1, chunksMode);
-                    } else {
-                        usage();
-                    }
 
+                    }
+                    // Ignoring rep for now
+                    HdfsWrite(fmt, args[1], 1, chunksMode);
+                    System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
+                    break;
+                default: usage();
             }
-            long fin = System.nanoTime();
-            System.out.println("Durée exécution: " + (fin-debut)/1000000L);
         } catch (FileNotFoundException | FileAlreadyExistsException ferr){
             System.err.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
         } catch (Exception ex) {
