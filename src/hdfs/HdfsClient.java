@@ -11,11 +11,13 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.*;
 
 
 public class HdfsClient {
     private static Metadata data;
+    private static final boolean verbose = false; // Useful for DEBUG
 
 
     private static void usage() {
@@ -23,6 +25,7 @@ public class HdfsClient {
                 "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes>|distributed ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
                 "| -l }\n"+
+                "Default format is ln. Default chunk sizing mode is distributed.\n" +
                 "--rep is currently not supported and is always 1.");
     }
 
@@ -41,13 +44,15 @@ public class HdfsClient {
      * Write a file in HDFS
      * @param fmt format of the file (KEY or LINE)
      * @param localFSSourceFname local file to add into HDFS
-     * @param repFactor number of copy of the same chunk
+     * @param repFactor number of copies of the same chunk
      * @param chunkSize approached size of the chunks (a chunk may be a little larger/smaller since
      *                  a line is never cut). When <= 0, distributed mode is used, ie if N servers
      *                  are available, the chunks will be split amongst k <= N servers.
      */
     public static void HdfsWrite(Format.Type fmt, String localFSSourceFname, int repFactor, long chunkSize)
             throws IOException, ExecutionException, InterruptedException {
+
+        if (localFSSourceFname.length() > 80) localFSSourceFname = localFSSourceFname.substring(0,80); //TODO bcs of buffers
 
         final String[] SERVERS_IP = Loader.getServersIp();
         final File local = new File(Project.PATH+localFSSourceFname);
@@ -62,7 +67,7 @@ public class HdfsClient {
             fd = new FileData(fmt, size, chunkSize);
 
         } else {
-            // TODO append possible?
+            // TODO is append possible?
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
 
@@ -70,7 +75,7 @@ public class HdfsClient {
         if (chunkSize <= 0) chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
 
         // Count chunks
-        int count = (int) ((long)(size / chunkSize)) + (size % chunkSize == 0 ? 0 : 1);
+        int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
 
         System.out.println("Splitting file in "+count+" chunks...");
 
@@ -78,7 +83,7 @@ public class HdfsClient {
         int procCount = Runtime.getRuntime().availableProcessors();
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(count, procCount));
         String chunkName;
-        LinkedList<Future<OperationResult<Boolean>>> results = new LinkedList<>();
+        LinkedList<Future<OperationResult<Long>>> results = new LinkedList<>();
 
         int j = 0;
         int id;
@@ -86,7 +91,7 @@ public class HdfsClient {
         for (int i = 0; i < count; i++) {
             id = i + start;
             chunkName = FileData.chunkName(id, localFSSourceFname, fmt);
-            Future<OperationResult<Boolean>> b = pool.submit(
+            Future<OperationResult<Long>> b = pool.submit(
                     new Write(chunkName, id, local, chunkSize, (i * chunkSize), SERVERS_IP[j]));
             results.add(b);
             j = (j + 1) % SERVERS_IP.length;
@@ -94,14 +99,16 @@ public class HdfsClient {
 
         // Check success and add metadata
         boolean allOk = true;
-        for (Future<OperationResult<Boolean>> b : results) {
-            OperationResult<Boolean> res = b.get();
-            boolean ok = res.getRes();
-            allOk &= ok;
-            if (ok) fd.addChunkHandle(res.getId(), res.getIpSource());
-            else {
-                //TODO
-                System.err.println("Something went wrong with "+res.getId());
+        for (Future<OperationResult<Long>> b : results) {
+            OperationResult<Long> res = b.get();
+            long resCode = res.getRes();
+            if (resCode == 0){
+                fd.addChunkHandle(res.getId(), res.getIpSource());
+
+            } else if (resCode != Constants.FILE_EMPTY) { // Just ignore an empty chunk
+                allOk = false;
+                // Print error code
+                System.err.println(res.getId()+ " error : "+res.getRes());
             }
 
         }
@@ -111,9 +118,9 @@ public class HdfsClient {
         if (allOk) {
             if (isNew) data.addFileData(localFSSourceFname, fd);
             Metadata.save(new File(Project.PATH + Loader.getDatafileName()), data);
+            System.out.println(localFSSourceFname + " successfully saved.");
         }
 
-        System.out.println(localFSSourceFname + " successfully saved.");
 
     }
 
@@ -140,14 +147,14 @@ public class HdfsClient {
         // Contact each server and read chunks using a thread pool
         int procCount = Runtime.getRuntime().availableProcessors();
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(fd.getChunkCount(), procCount));
-        LinkedList<Future<OperationResult<File>>> results = new LinkedList<>();
+        LinkedList<Future<OperationResult<Map.Entry<Long,File>>>> results = new LinkedList<>();
         String chunkName;
 
         // Submit each chunk to the pool
         for (int id : fd.getChunksIds()) {
             String ip = fd.getSourcesForChunk(id).get(0); // Get(0) since rep=1
             chunkName = FileData.chunkName(id, hdfsFname, fd.getFormat());
-            Future<OperationResult<File>> b = pool.submit(new Read(chunkName, id, ip));
+            Future<OperationResult<Map.Entry<Long,File>>> b = pool.submit(new Read(chunkName, id, ip));
             results.add(b);
 
         }
@@ -157,29 +164,37 @@ public class HdfsClient {
         FileInputStream in;
         byte[] buf = new byte[Constants.BUFFER_SIZE];
         int read;
+        boolean allOk = true;
 
-        for (Future<OperationResult<File>> b : results) {
-            OperationResult<File> res = b.get();
-            File tmp = res.getRes();
-            if (tmp != null) {
-                in = new FileInputStream(tmp);
-                while ((read = in.read(buf)) > 0) {
-                    out.write(buf,0,read);
+        for (Future<OperationResult<Map.Entry<Long,File>>> b : results) {
+            OperationResult<Map.Entry<Long,File>> res = b.get();
+            Map.Entry<Long,File> resObj = res.getRes();
+            File tmp = resObj.getValue();
+            long resCode = resObj.getKey();
+
+            // Append only if there's no error
+            if (resCode == 0 && allOk) {
+                if (tmp != null) {
+                    in = new FileInputStream(tmp);
+                    while ((read = in.read(buf)) > 0) {
+                        out.write(buf, 0, read);
+                    }
+
+                    in.close();
+                    tmp.delete();
                 }
-
-                in.close();
-                tmp.delete();
             }
             else {
-                //TODO
-                System.err.println("Something went wrong with "+res.getId());
+                allOk = false;
+                if (tmp != null) tmp.delete();
+                System.err.println(res.getId()+ " error : "+resCode);
             }
 
         }
         pool.shutdown();
         out.close();
-
-        System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
+        if (allOk) System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
+        else local.delete();
 
     }
 
@@ -197,25 +212,25 @@ public class HdfsClient {
 
         int procCount = Runtime.getRuntime().availableProcessors();
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(fd.getChunkCount(), procCount));
-        LinkedList<Future<OperationResult<Boolean>>> results = new LinkedList<>();
+        LinkedList<Future<OperationResult<Long>>> results = new LinkedList<>();
         String chunkName;
 
         // Submit each chunk to the pool
         for (int id : fd.getChunksIds()) {
             chunkName = FileData.chunkName(id, hdfsFname, fd.getFormat());
             String ip = fd.getSourcesForChunk(id).get(0); // Get(0) since rep=1
-            Future<OperationResult<Boolean>> b = pool.submit(new Delete(chunkName, id, ip));
+            Future<OperationResult<Long>> b = pool.submit(new Delete(chunkName, id, ip));
             results.add(b);
 
         }
         boolean allOk = true;
-        for (Future<OperationResult<Boolean>> b : results) {
-            OperationResult<Boolean> res = b.get();
-            boolean ok = res.getRes();
-            allOk &= ok;
+        for (Future<OperationResult<Long>> b : results) {
+            OperationResult<Long> res = b.get();
+            boolean ok = (res.getRes() == 0);
             if (!ok) {
-                //TODO
-                System.err.println("Something went wrong with "+res.getId());
+                allOk = false;
+                // Print error code
+                System.err.println(res.getId()+ " error : "+res.getRes());
             }
 
         }
@@ -262,7 +277,7 @@ public class HdfsClient {
     /**
      * Callable reading a chunk from an HdfsServer node
      */
-    private static class Read implements Callable<OperationResult<File>> {
+    private static class Read implements Callable<OperationResult<Map.Entry<Long, File>>> {
         private final String command;
         private final File local;
         private final String serverIp;
@@ -273,7 +288,6 @@ public class HdfsClient {
             this.command = Commands.HDFS_READ.toString() + " " + name;
             String tmpName = name + ".tmp";
             this.local = new File(Project.PATH+tmpName);
-            if (local.exists()) throw new FileAlreadyExistsException(tmpName);
             local.createNewFile();
             this.serverIp = serverIp;
             this.id = id;
@@ -281,11 +295,9 @@ public class HdfsClient {
 
 
         @Override
-        public OperationResult<File> call() {
+        public OperationResult<Map.Entry<Long, File>> call() {
+
             try {
-                byte[] buf = new byte[Constants.BUFFER_SIZE];
-                int read;
-                FileOutputStream out = new FileOutputStream(local);
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
                 OutputStream os = hdfsSocket.getOutputStream();
                 InputStream is = hdfsSocket.getInputStream();
@@ -295,23 +307,44 @@ public class HdfsClient {
                 cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
                 os.write(cmd);
 
-                // Copy bytes to file while receiving
-                while ((read = is.read(buf)) > 0) {
-                    //System.out.print(serverIp+" "+id+" <- "+new String(buf, StandardCharsets.UTF_8));
-                    out.write(buf,0,read);
+                // Get chunk size info from the server
+                is.readNBytes(cmd, 0, Long.BYTES);
+                long length = Constants.getLong(cmd);
+
+                if (length <= 0) {
+                    hdfsSocket.close();
+                    return new OperationResult<>(id, serverIp, Map.entry((long)Constants.FILE_NOT_FOUND, local));
                 }
 
+                FileOutputStream out = new FileOutputStream(local);
+                long total = 0;
+                int read;
+                byte[] buf = new byte[Constants.BUFFER_SIZE];
+
+                // Copy bytes to file while receiving expected bytes
+                while (total < length && (read = is.read(buf)) > 0) {
+                    //System.out.print(serverIp+" "+id+" <- "+new String(buf, StandardCharsets.UTF_8));
+                    out.write(buf,0,read);
+                    total += read;
+                }
+
+                long status = 0;
+                // Check size integrity
+                if (total != length) {
+                    status = Constants.INCONSISTENT_FILE_SIZE;
+                    System.err.println("RD error : "+total+" "+length);
+                }
+
+
                 // CLose connection
-                is.close();
-                os.close();
                 out.close();
                 hdfsSocket.close();
 
-                return new OperationResult<>(id, serverIp, local);
+                return new OperationResult<>(id, serverIp, Map.entry(status, local));
 
             } catch (Exception e) {
                 e.printStackTrace();
-                return new OperationResult<>(id, serverIp, null);
+                return new OperationResult<>(id, serverIp, Map.entry(Constants.IO_ERROR, local));
             }
         }
     }
@@ -319,7 +352,7 @@ public class HdfsClient {
     /**
      * Callable writing a chunk to an HdfsServer node
      */
-    private static class Write implements Callable<OperationResult<Boolean>> {
+    private static class Write implements Callable<OperationResult<Long>> {
         private final String command;
         private final File local;
         private final long chunkSize;
@@ -329,7 +362,7 @@ public class HdfsClient {
 
         public Write(String name, int id, File local, long chunkSize, long offset, String serverIp) {
 
-            this.command = Commands.HDFS_WRITE.toString() + " " + name + " " + chunkSize;
+            this.command = Commands.HDFS_WRITE.toString() + " " + name + " ";
             this.local = local;
             this.chunkSize = chunkSize;
             this.offset = offset;
@@ -337,46 +370,23 @@ public class HdfsClient {
             this.id = id;
         }
 
-        /**
-         * Find next '\n' in an array of bytes
-         * @param array characters as array of bytes
-         * @param startAt ignore bytes before this index
-         * @return index of first occurrence of '\n', or -1 if not found
-         */
-        private int nextLF(byte[] array, int startAt){
-            if (startAt >= array.length) return -1;
-            for (int i=startAt;i < array.length;i++){
-                if (array[i] == 0x0a) return i;
-            }
-            return -1;
-        }
-
 
         @Override
-        public OperationResult<Boolean> call() {
+        public OperationResult<Long> call() {
             try {
-                int sz = (long)Constants.BUFFER_SIZE > chunkSize ? (int) chunkSize : Constants.BUFFER_SIZE;
-                byte[] buf = new byte[sz];
-                long total = 0;
+
+                // Size of the io and tcp buffer
+                int size = (long)Constants.BUFFER_SIZE > chunkSize ? (int) chunkSize : Constants.BUFFER_SIZE;
+                byte[] buf = new byte[size];
+                // Total bytes read in the file; length sent to the server; beginning of this chunk is at offset + prevLineOffset
+                long total = 0, totalWritten = 0, prevLineOffset = 0;
 
                 int read, off, len, ind = 0;
 
-                FileInputStream in = new FileInputStream(local);
-
                 // Read chunksize bytes from source file starting from offset
+                FileInputStream in = new FileInputStream(local);
                 in.getChannel().position(offset);
 
-                // Init socket connection
-                Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
-                OutputStream os = hdfsSocket.getOutputStream();
-
-                // Send command header
-                byte[] cmd = command.getBytes(StandardCharsets.UTF_8);
-                cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
-                // System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.UTF_8));
-                os.write(cmd);
-
-                /* Send chunk content */
 
                 // If this is not the first chunk, then skip the end of the previous line
                 // Else read from 0
@@ -385,22 +395,22 @@ public class HdfsClient {
                     do {
                         read = in.read(buf);
                         // End of the file reached, no need to create an empty chunk
-                        //TODO replace boolean with better info
                         if (read <= 0) {
                             in.close();
-                            return new OperationResult<>(id, serverIp, false);
+                            return new OperationResult<>(id, serverIp, Constants.FILE_EMPTY);
                         }
                         total += read;
 
-                    } while ((ind = nextLF(buf, 0)) == -1);
+                    } while ((ind = Constants.findByte(buf, Constants.NEW_LINE, 0, buf.length)) == -1);
 
 
                     // End of the previous line was found at index ind
                     // Offset placed to next character
                     off = ind+1;
-
-                    len = Math.min(buf.length - ind - 1, read - ind - 1);
+                    len = read - ind - 1;
                         //System.out.println(serverIp+" "+id+" <- skip : '"+line.substring(0,ind+1)+"'");
+                    prevLineOffset = total - len;
+
 
                 } else {
                     // Read a first time
@@ -408,11 +418,35 @@ public class HdfsClient {
                     total += read;
                     len = read;
                     off = 0;
-
                 }
 
+                // Init socket connection
+                Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
+                OutputStream os = hdfsSocket.getOutputStream();
+                InputStream is = hdfsSocket.getInputStream();
+
+
+
+                // Minimum nb of bytes sent is chunkSize or remaining size of file minus the ignored end of previous line
+                long minChunkSize = Math.min(chunkSize, local.length() - offset) - prevLineOffset;
+
+                // Send command header
+                byte[] cmd;
+                cmd = command.concat(String.valueOf(minChunkSize)).getBytes(StandardCharsets.UTF_8);
+                cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
+                //System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.UTF_8));
+                os.write(cmd);
+
+
+                /* Send chunk content */
+
                 // Write and read while end of file is not reached and while the chunk or the line is not over
-                while (read > 0 && (total <= chunkSize ||(ind = nextLF(buf, (int)(read - (total - chunkSize)))) == -1)) {
+                // If the total read is bg or eq than the chunkSize, start looking for '\n' at the index where chunkSize
+                // bytes were read in total
+                while (read > 0 && (total <= chunkSize ||
+                        (ind = Constants.findByte(buf, Constants.NEW_LINE, (int)(read - (total - chunkSize)), buf.length)) == -1))
+                {
+                    totalWritten += len;
                     os.write(buf, off, len);
                     read = in.read(buf);
                     total += read;
@@ -421,24 +455,40 @@ public class HdfsClient {
                 }
 
 
-                // Write the end of the line if EOF was not reached
+
+                // Write the end of the line if EOF was not reached and send end of chunk delimiter
                 if (read > 0){
-                    os.write(buf, 0, ind+1);
+                    totalWritten += ind+1;
+                    buf[ind+1] = Constants.END_CHUNK_DELIMITER;
+                    os.write(buf, 0, ind+2);
+                } else {
+                    os.write(Constants.END_CHUNK_DELIMITER);
                 }
+
+                long status = 0;
+
+                if (verbose) System.out.println(id + " awaiting server validation...");
+                is.readNBytes(cmd, 0,  Long.BYTES);
+                long written = Constants.getLong(cmd);
+
+                if (written != totalWritten){ //TODO
+                    status = Constants.INCONSISTENT_FILE_SIZE;
+                    System.out.println(id+" WR error : "+written+" / "+totalWritten);
+                }
+
 
                 // Close file and connection
                 in.close();
-                os.close();
                 hdfsSocket.close();
 
 
                 // Success
-                return new OperationResult<>(id, serverIp, true);
+                return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
                 e.printStackTrace();
                 // Signal failure
-                return new OperationResult<>(id, serverIp, false);
+                return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
             }
         }
     }
@@ -448,7 +498,7 @@ public class HdfsClient {
     /**
      * Callable deleting a chunk from an HdfsServer node
      */
-    private static class Delete implements Callable<OperationResult<Boolean>> {
+    private static class Delete implements Callable<OperationResult<Long>> {
         private final String command;
         private final String serverIp;
         private final int id;
@@ -462,25 +512,29 @@ public class HdfsClient {
 
 
         @Override
-        public OperationResult<Boolean> call() {
+        public OperationResult<Long> call() {
             try {
 
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
                 OutputStream os = hdfsSocket.getOutputStream();
+                InputStream is = hdfsSocket.getInputStream();
 
                 // Send command
                 byte[] cmd = command.getBytes(StandardCharsets.US_ASCII);
                 cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
                 os.write(cmd);
 
+                // Check status
+                is.readNBytes(cmd, 0, Long.BYTES);
+                long status = Constants.getLong(cmd);
+
                 // Close connection
-                os.close();
                 hdfsSocket.close();
-                return new OperationResult<>(id, serverIp, true);
+                return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
                 e.printStackTrace();
-                return new OperationResult<>(id, serverIp, false);
+                return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
             }
         }
     }
@@ -494,23 +548,22 @@ public class HdfsClient {
                 return;
             }
             long start;
-            boolean verbose = false;
 
             switch (args[0]) {
                 case "-l":
-                    data = Loader.loadConfigAndMeta();
+                    data = Loader.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsList();
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
-                    data = Loader.loadConfigAndMeta();
+                    data = Loader.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsRead(args[1], args.length > 2 ? args[2] : null);
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-d":
-                    data = Loader.loadConfigAndMeta();
+                    data = Loader.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsDelete(args[1]);
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
@@ -537,6 +590,7 @@ public class HdfsClient {
                             else if(mode.matches("[-]?[0-9]+")) chunksMode = Long.parseLong(mode);
                             next++;
                         } else if (args[next].startsWith("--rep=")){
+                            /*
                             String r = args[next].substring("--rep=".length());
                             if(r.matches("[0-9]+")) rep = Integer.parseInt(r);
                             else {
@@ -544,6 +598,9 @@ public class HdfsClient {
                                 return;
                             }
                             next++;
+                            */
+                            usage();
+                            return;
                         } else {
                             usage();
                             return;
@@ -551,9 +608,9 @@ public class HdfsClient {
 
                     }
                     // Ignoring rep for now
-                    data = Loader.loadConfigAndMeta();
+                    data = Loader.loadConfigAndMeta(true);
                     start = System.currentTimeMillis();
-                    HdfsWrite(fmt, args[1], 1, chunksMode);
+                    HdfsWrite(fmt, args[1], rep, chunksMode);
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 default: usage();

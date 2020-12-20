@@ -14,7 +14,7 @@ public class Metadata implements Serializable {
     private Date saveDate;
     private final HashMap<String, FileData> files;
 
-    public static Metadata load(File f) throws IOException, ClassNotFoundException {
+    public static Metadata load(File f, boolean createIfNotFound) throws IOException, ClassNotFoundException {
         Metadata metadata;
         if (f.exists()) {
             FileInputStream file = new FileInputStream(f);
@@ -23,9 +23,11 @@ public class Metadata implements Serializable {
             metadata = (Metadata) in.readObject();
             in.close();
             file.close();
-        } else {
+        } else if (createIfNotFound){
             System.out.println("No metadata file found. Creating new file...");
             metadata = new Metadata();
+        } else {
+            throw new FileNotFoundException("No metadata file found.");
         }
         return metadata;
     }
@@ -46,7 +48,13 @@ public class Metadata implements Serializable {
         this.files = new HashMap<>();
     }
 
+    /**
+     * Add file data
+     * @param name name of the file ( <= 50 chars)
+     * @param fd file data
+     */
     public void addFileData(String name, FileData fd){
+        assert name.length() <= 80; //TODO
         files.put(name, fd);
     }
 

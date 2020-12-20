@@ -7,7 +7,6 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 
-/** Commande + nom + taille */
 public class HdfsServer {
 
     /** A thread for each client */
@@ -17,6 +16,7 @@ public class HdfsServer {
         public Slave(Socket socket) {
             this.socket = socket;
         }
+
         
         public void run() {
 
@@ -25,10 +25,10 @@ public class HdfsServer {
             InputStream inS = socket.getInputStream();
             OutputStream ouS = socket.getOutputStream();
 
-            /** Buffer commande */
+            /** Buffer commande : Commande + nom (+ taille) */
 
             byte[] buf = new byte[Constants.CMD_BUFFER_SIZE];
-            int nbOctetsInLus = inS.read(buf);;
+            inS.readNBytes(buf, 0, Constants.CMD_BUFFER_SIZE);
 
             /** ToString + Split */
             String message = new String (buf, StandardCharsets.UTF_8);
@@ -40,6 +40,7 @@ public class HdfsServer {
             if (cmd != null) {
 
                 String nameFile;
+                int nbOctetsInLus;
 
 
                 /* Execute command */
@@ -51,7 +52,9 @@ public class HdfsServer {
                             System.err.println("Erreur HDFS_WRITE Serveur : 2 arguments attendus, trouvés "+args.length);
                         } else {
                             nameFile = args[1];
-                            int sizeFile = Integer.parseInt(args[2]);
+                            long minFileSize = Long.parseLong(args[2]);
+                            // TODO ici confirmation taille disponible sur le serveur
+
                             int nbytesTotal = 0;
                             /** Buffer */
                             byte[] buffer = new byte[Constants.BUFFER_SIZE];
@@ -59,16 +62,38 @@ public class HdfsServer {
                             /* Fichier crée */
                             File fichier = new File(Project.PATH + nameFile);
                             FileOutputStream fileStream = new FileOutputStream(fichier);
-                            while ((nbOctetsInLus = inS.read(buffer)) != -1) {
 
+                            int end = -1;
+
+                            nbOctetsInLus = inS.read(buffer);
+                            while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER,0,nbOctetsInLus)) == -1){
+
+                                if (nbytesTotal > minFileSize * 5){ // TODO Refuser chunk trop gros (sécurité)
+                                    Constants.putLong(buf, Constants.FILE_TOO_LARGE);
+                                    ouS.write(buf,0,Long.BYTES);
+                                    socket.close();
+                                    return;
+                                }
                                 fileStream.write(buffer, 0, nbOctetsInLus);
-                                nbytesTotal += nbOctetsInLus;
-                            //    if (nbytesTotal > 100000000) throw new ; //TODO
+                                nbOctetsInLus = inS.read(buffer);
                             }
-                            if (nbytesTotal > 0)
-                                System.out.println(nameFile +" saved.");
-                            else
-                               fichier.delete();
+
+
+                            fileStream.write(buffer, 0, end);
+                            // Mise à jour de la taille écrite
+                            nbytesTotal -= (nbOctetsInLus - end);
+
+
+                            if (nbytesTotal > 0) {
+                                Constants.putLong(buf, nbytesTotal);
+                                ouS.write(buf,0,Long.BYTES);
+                                System.out.println(nameFile + " saved ("+nbytesTotal+" B).");
+                            } else {
+                                Constants.putLong(buf, Constants.FILE_EMPTY);
+                                ouS.write(buf,0,Long.BYTES);
+                                fileStream.close();
+                                fichier.delete();
+                            }
                         }
                         break;
                     
@@ -78,21 +103,26 @@ public class HdfsServer {
                             System.err.println("Erreur HDFS_READ Serveur : 1 argument attendu");
                         } else {
                             nameFile = args[1];
-                            /** Buffer */
-                            byte[] buffer = new byte[Constants.BUFFER_SIZE];
 
                             /* Sending file */
                             File fichier = new File(Project.PATH + nameFile);
-                            
-                            /* File doesn't exist */
+
                             if (fichier.exists()) {
+                                /** Envoi de la taille du chunk */
+                                Constants.putLong(buf, fichier.length());
+                                ouS.write(buf,0,Long.BYTES);
+                                /** Buffer */
+                                byte[] buffer = new byte[Constants.BUFFER_SIZE];
 
                                 FileInputStream fileStream = new FileInputStream(fichier);
                                 while ((nbOctetsInLus = fileStream.read(buffer)) != -1) {
-
                                     ouS.write(buffer, 0, nbOctetsInLus);
-
                                 }
+
+                            } else {
+                                /* File doesn't exist */
+                                Constants.putLong(buf, Constants.FILE_NOT_FOUND);
+                                ouS.write(buf,0,Long.BYTES);
                             }
                         }
                         break;
@@ -110,6 +140,12 @@ public class HdfsServer {
                             if (fichier.exists()) {
                                 fichier.delete();
                                 System.out.println(nameFile +" deleted.");
+                                Constants.putLong(buf, 0);
+                                ouS.write(buf,0,Long.BYTES);
+                            } else {
+                                /* File doesn't exist */
+                                Constants.putLong(buf, Constants.FILE_NOT_FOUND);
+                                ouS.write(buf,0,Long.BYTES);
                             }
                         }
                         break;

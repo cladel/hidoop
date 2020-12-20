@@ -24,9 +24,10 @@ public class Loader {
 
     /**
      * Loads configuration (servers nodes and metadata) into memory
+     * @param createIfNotFound create metadata file if not found
      * @return Metadata informations (since we always need them)
      */
-    public static Metadata loadConfigAndMeta() throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
+    public static Metadata loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         File fileXML = new File(Project.PATH+"conf.xml");
@@ -44,7 +45,7 @@ public class Loader {
                 SERVERS_IP[i] = e.getAttribute("ip");
             }
 
-            return Metadata.load(new File(Project.PATH + DATAFILE_NAME));
+            return Metadata.load(new File(Project.PATH + DATAFILE_NAME), createIfNotFound);
         } else {
             throw new FileNotFoundException("No conf.xml found.");
         }
