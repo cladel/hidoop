@@ -1,4 +1,4 @@
-package hdfs;
+package config;
 
 import java.io.*;
 import java.util.*;
@@ -14,7 +14,7 @@ public class Metadata implements Serializable {
     private Date saveDate;
     private final HashMap<String, FileData> files;
 
-    public static Metadata load(File f, boolean createIfNotFound) throws IOException, ClassNotFoundException {
+    protected static Metadata load(File f, boolean createIfNotFound) throws IOException, ClassNotFoundException {
         Metadata metadata;
         if (f.exists()) {
             FileInputStream file = new FileInputStream(f);
@@ -32,7 +32,7 @@ public class Metadata implements Serializable {
         return metadata;
     }
 
-    public static void save(File f, Metadata data) throws IOException {
+    protected static void save(File f, Metadata data) throws IOException {
         data.saveDate = new Date();
         FileOutputStream file = new FileOutputStream(f);
         ObjectOutputStream in = new ObjectOutputStream(file);

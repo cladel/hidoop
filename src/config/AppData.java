@@ -1,6 +1,5 @@
 package config;
 
-import hdfs.Metadata;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -16,10 +15,18 @@ import java.io.IOException;
 /**
  * Loader for Hidoop configuration and metadata
  */
-public class Loader {
+public class AppData {
 
-    private static String[] SERVERS_IP; // Liste des ip des HdfsServer
-    private static String DATAFILE_NAME; // Metadata file
+    // Object containing information about the files stored in Hdfs
+    private Metadata metadata;
+    // Information about registered servers
+    private String[] serversIp;
+    // Metadata file name
+    private final String DATAFILE_NAME;
+
+    private AppData(String datafile) {
+        DATAFILE_NAME = datafile;
+    }
 
 
     /**
@@ -27,7 +34,7 @@ public class Loader {
      * @param createIfNotFound create metadata file if not found
      * @return Metadata informations (since we always need them)
      */
-    public static Metadata loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
+    public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         File fileXML = new File(Project.PATH+"conf.xml");
@@ -35,33 +42,44 @@ public class Loader {
             Document xml = builder.parse(fileXML);
 
             Element root = xml.getDocumentElement();
-            DATAFILE_NAME = root.getAttribute("metadata");
+            AppData ld = new AppData(root.getAttribute("metadata"));
 
             NodeList nlist = root.getElementsByTagName("node");
             int l = nlist.getLength();
-            SERVERS_IP = new String[l];
+            ld.serversIp = new String[l];
             for (int i = 0; i < l; i++) {
                 Element e = (Element) nlist.item(i);
-                SERVERS_IP[i] = e.getAttribute("ip");
+                ld.serversIp[i] = e.getAttribute("ip");
             }
 
-            return Metadata.load(new File(Project.PATH + DATAFILE_NAME), createIfNotFound);
+            ld.metadata = Metadata.load(new File(Project.PATH + ld.DATAFILE_NAME), createIfNotFound);
+
+            return ld;
         } else {
             throw new FileNotFoundException("No conf.xml found.");
         }
     }
 
     /**
+     * Save updated metadata
+     * @param data metadata object
+     */
+    public void saveMetadata(Metadata data) throws IOException {
+        Metadata.save(new File(Project.PATH + DATAFILE_NAME),data);
+    }
+
+
+    /**
      * @return list of available servers ip
      */
-    public static String[] getServersIp() {
-        return SERVERS_IP;
+    public String[] getServersIp() {
+        return serversIp;
     }
 
     /**
-     * @return metadata filename
+     * @return metadata
      */
-    public static String getDatafileName() {
-        return DATAFILE_NAME;
+    public Metadata getMetadata() {
+        return metadata;
     }
 }

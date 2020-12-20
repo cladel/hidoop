@@ -1,4 +1,4 @@
-package hdfs;
+package config;
 
 import formats.Format;
 
@@ -11,6 +11,8 @@ import java.util.*;
  */
 public class FileData implements Serializable{
     public static final long serialVersionUID = Metadata.serialVersionUID;
+
+    public static final long UNKNOWN_CHUNK_SIZE = -1;
 
     private long fileSize; // file size in bytes
     private long chunkSize; // chunks size in bytes
@@ -49,8 +51,6 @@ public class FileData implements Serializable{
             ChunkSources cs = new ChunkSources();
             cs.addChunkSource(nodeIp);
             chunks.put(chunkId, cs);
-            fileSize += chunkSize;
-            // TODO gestion de chunks ne remplissant pas la taille chunkSize (cas append)
         }
     }
 
