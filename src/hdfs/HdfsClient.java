@@ -437,6 +437,16 @@ public class HdfsClient {
                 //System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.UTF_8));
                 os.write(cmd);
 
+                // Wait for server conformation
+                is.readNBytes(cmd, 0, Long.BYTES);
+                long res = Constants.getLong(cmd);
+                if (res != 0){
+                    // If error stop exchange
+                    in.close();
+                    hdfsSocket.close();
+                    return new OperationResult<>(id, serverIp, res);
+                }
+
 
                 /* Send chunk content */
 
@@ -471,7 +481,7 @@ public class HdfsClient {
                 is.readNBytes(cmd, 0,  Long.BYTES);
                 long written = Constants.getLong(cmd);
 
-                if (written != totalWritten){ //TODO
+                if (written != totalWritten){
                     status = Constants.INCONSISTENT_FILE_SIZE;
                     System.out.println(id+" WR error : "+written+" / "+totalWritten);
                 }

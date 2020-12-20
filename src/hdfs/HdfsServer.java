@@ -53,7 +53,18 @@ public class HdfsServer {
                         } else {
                             nameFile = args[1];
                             long minFileSize = Long.parseLong(args[2]);
-                            // TODO ici confirmation taille disponible sur le serveur
+
+                            // Confirmation allocation possible sur le serveur
+                            File dir = new File(Project.PATH);
+                            if (dir.getUsableSpace() <= 2 * minFileSize){
+                                Constants.putLong(buf, Constants.FILE_TOO_LARGE);
+                                ouS.write(buf,0,Long.BYTES);
+                                socket.close();
+                                return;
+                            } else {
+                                Constants.putLong(buf, 0);
+                                ouS.write(buf,0,Long.BYTES);
+                            }
 
                             int nbytesTotal = 0;
                             /** Buffer */
@@ -68,7 +79,8 @@ public class HdfsServer {
                             nbOctetsInLus = inS.read(buffer);
                             while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER,0,nbOctetsInLus)) == -1){
 
-                                if (nbytesTotal > minFileSize * 5){ // TODO Refuser chunk trop gros (sécurité)
+                                if (nbytesTotal > minFileSize * 2){
+                                    // Refuser chunk trop gros (sécurité)
                                     Constants.putLong(buf, Constants.FILE_TOO_LARGE);
                                     ouS.write(buf,0,Long.BYTES);
                                     socket.close();
