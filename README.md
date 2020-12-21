@@ -17,5 +17,5 @@ Un fichier d'exemple est donné ci-dessous :
         </servers>
     </config>
 
-Les informations sur les serveurs sont chargées dans ***Loader.SERVERS_IP***. 
-Informations et métadonnées peuvent être chargées via *Loader.loadConfigAndMeta()*.
+Les informations sur les serveurs sont chargées dans ***AppData***. 
+Informations et métadonnées peuvent être chargées via la méthode *loadConfigAndMeta()*.

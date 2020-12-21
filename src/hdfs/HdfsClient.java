@@ -69,6 +69,8 @@ public class HdfsClient {
 
         Metadata data = HdfsClient.data.getMetadata();
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
+        if (SERVERS_IP.length == 0) throw new UnsupportedOperationException("No server found.");
+
         final File local = new File(Project.PATH+localFSSourceFname);
         long size = local.length(); // size in bytes
         int start = 0;
