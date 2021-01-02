@@ -11,14 +11,14 @@ public class Constants {
     public static final int CMD_BUFFER_SIZE = 96; // 4 + file_name + 8 bytes
     public final static String SEPARATOR = " ";
     public final static byte END_CHUNK_DELIMITER = 0x03; // End of text
-    public final static byte NEW_LINE = 0x0a; // End of text
+    public final static byte NEW_LINE = 0x0a; // End of line
 
     /* Error constants */
-    public final static long FILE_NOT_FOUND = -1;
     public final static long FILE_EMPTY = -2;
     public final static long FILE_TOO_LARGE = -3;
     public final static long INCONSISTENT_FILE_SIZE = -4;
     public final static long IO_ERROR = -5;
+    public final static long FILE_NOT_FOUND = -10;
 
 
 

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+
 /**
  * Loader for Hidoop configuration and metadata
  */
@@ -24,6 +25,7 @@ public class AppData {
     // Metadata file name
     private final String DATAFILE_NAME;
 
+
     private AppData(String datafile) {
         DATAFILE_NAME = datafile;
     }
@@ -32,13 +34,14 @@ public class AppData {
     /**
      * Loads configuration (servers nodes and metadata) into memory
      * @param createIfNotFound create metadata file if not found
-     * @return Metadata informations (since we always need them)
+     * @return Metadata information (since we always need them)
      */
     public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         File fileXML = new File(Project.PATH+"conf.xml");
         if (fileXML.exists()) {
+            // If file exists parse xml
             Document xml = builder.parse(fileXML);
 
             Element root = xml.getDocumentElement();

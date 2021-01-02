@@ -10,12 +10,12 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 
 public class WorkerImpl extends UnicastRemoteObject implements Worker {
-    static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
-    static int port[] = {2001, 2002, 2003};
+  //  static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
+  //  static int port[] = {2001, 2002, 2003};
     static int choix;
 
-    protected WorkerImpl() throws RemoteException {
-    }
+
+    protected WorkerImpl() throws RemoteException { }
 
     @Override
     public void runMap(Mapper m, Format reader, Format writer, CallBack cb) throws RemoteException {
@@ -32,8 +32,8 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
         try {
             choix = Integer.parseInt(args[0]) - 1;
             WorkerImpl worker = new WorkerImpl();
-            LocateRegistry.createRegistry(port[choix]);
-            Naming.rebind("//localhost:" + port[choix] + "/" + server[choix], worker);
+            LocateRegistry.createRegistry(Job.PORT);
+            Naming.rebind("//localhost:" + Job.PORT + "/worker", worker);
         } catch (RemoteException | MalformedURLException e) {
             e.printStackTrace();
         }

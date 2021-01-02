@@ -12,7 +12,7 @@ import java.util.*;
 public class FileData implements Serializable{
     public static final long serialVersionUID = Metadata.serialVersionUID;
 
-    public static final long UNKNOWN_CHUNK_SIZE = -1;
+    public static final long UNKNOWN_SIZE = -1;
 
     private long fileSize; // file size in bytes
     private long chunkSize; // chunks size in bytes

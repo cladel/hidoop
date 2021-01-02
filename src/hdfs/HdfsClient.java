@@ -329,7 +329,8 @@ public class HdfsClient {
                 is.readNBytes(cmd, 0, Long.BYTES);
                 long length = Constants.getLong(cmd);
 
-                if (length <= 0) {
+
+                if (length < -1) { //TODO cas -1 (unknown size)
                     hdfsSocket.close();
                     return new OperationResult<>(id, serverIp, Map.entry((long)Constants.FILE_NOT_FOUND, local));
                 }
@@ -340,7 +341,7 @@ public class HdfsClient {
                 byte[] buf = new byte[Constants.BUFFER_SIZE];
 
                 // Copy bytes to file while receiving expected bytes
-                while (total < length && (read = is.read(buf)) > 0) {
+                while ((total < length || length == -1) && (read = is.read(buf)) > 0) {
                     //System.out.print(serverIp+" "+id+" <- "+new String(buf, StandardCharsets.UTF_8));
                     out.write(buf,0,read);
                     total += read;
@@ -348,7 +349,7 @@ public class HdfsClient {
 
                 long status = 0;
                 // Check size integrity
-                if (total != length) {
+                if (total != length && length != -1) { //TODO
                     status = Constants.INCONSISTENT_FILE_SIZE;
                     System.err.println("RD error : "+total+" "+length);
                 }

@@ -1,18 +1,28 @@
 package ordo;
 
+import config.AppData;
+import config.FileData;
+import config.Metadata;
 import formats.*;
+import hdfs.HdfsClient;
 import map.MapReduce;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.concurrent.ExecutionException;
 
 public class Job implements JobInterface{
     Format.Type fType;
     String fName;
-    static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
-    static int port[] = {2001, 2002, 2003};
+
+    static public int PORT = 2000;
+    //static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
+    //static int port[] = {2001, 2002, 2003};
 
     public Job(){ }
 
@@ -30,22 +40,31 @@ public class Job implements JobInterface{
     public void startJob(MapReduce mr) {
 
         try {
+            AppData m = AppData.loadConfigAndMeta(false);
+            String [] server = m.getServersIp();
+            Metadata data = m.getMetadata();
+
             CallBackImpl cb = new CallBackImpl(server.length);
 
             for (int i=0 ; i<server.length ; i++ ){
-                Thread t = new Thread(new Employe(i, mr, this.fType, this.fName, cb));
+                FileData fd = new FileData(fType, FileData.UNKNOWN_SIZE, FileData.UNKNOWN_SIZE);
+                data.addFileData(fName+"-res", fd);
+                Thread t = new Thread(new Employe(server[i], i, mr, this.fType, this.fName, cb));
                 t.start();
+                m.saveMetadata(data);
             }
+
+            HdfsClient.HdfsRead(fName+"-res", fName + "-res");
 
             Format frReduce;
             Format fwReduce;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
                                                  // l'output est obligatoirement le même
-                frReduce = new KVFormat(fName + "-tot");
-                fwReduce = new KVFormat(fName + "-res");
+                frReduce = new KVFormat(fName + "-res");
+                fwReduce = new KVFormat(fName + "-tot");
             } else {
-                frReduce = new KVFormat(fName + "-tot");
-                fwReduce = new KVFormat(fName + "-res");
+                frReduce = new KVFormat(fName + "-res");
+                fwReduce = new KVFormat(fName + "-tot");
             }
 
             cb.attente();
@@ -55,7 +74,19 @@ public class Job implements JobInterface{
             frReduce.close();
             fwReduce.close();
             System.out.println("Fini Reduce");
+
+            HdfsClient.HdfsDelete(fName + "-res");
         } catch (InterruptedException | RemoteException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -67,14 +98,16 @@ class Employe implements Runnable{
     private final MapReduce mr;
     private Format.Type fType;
     private String fName;
+    private String server;
 
 
-    public Employe(int nb, MapReduce mr, Format.Type fType, String fName, CallBackImpl cb){
+    public Employe(String server, int nb, MapReduce mr, Format.Type fType, String fName, CallBackImpl cb){
         this.numServ = nb;
         this.mr = mr;
         this.fType = fType;
         this.fName = fName;
         this.cb = cb;
+        this.server = server;
     }
 
     @Override
@@ -85,15 +118,15 @@ class Employe implements Runnable{
             Format fwMap;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
                                                  // l'output est obligatoirement l'autre
-                frMap = new LineFormat(fName + "-" + (numServ+1));
-                fwMap = new KVFormat(fName + "-" + (numServ+1) + "res");
+                frMap = new LineFormat(FileData.chunkName(numServ, fName, Format.Type.LINE));
+                fwMap = new KVFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
             } else {
-                frMap = new KVFormat(fName + "-" + (numServ+1));
-                fwMap = new LineFormat(fName + "-" + (numServ+1) + "res");
+                frMap = new KVFormat(FileData.chunkName(numServ, fName, Format.Type.KV));
+                fwMap = new LineFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
             }
 
-            System.out.println("//localhost:" + Job.port[numServ] + "/" + Job.server[numServ]);
-            Worker worker = (Worker) Naming.lookup("//localhost:" + Job.port[numServ] + "/" + Job.server[numServ]);
+           // System.out.println("//"+server+":" + Job.PORT + "/" + server);
+            Worker worker = (Worker) Naming.lookup("//"+server+":" + Job.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
         } catch (NotBoundException exception) {
             exception.printStackTrace();
