@@ -10,9 +10,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 
 public class WorkerImpl extends UnicastRemoteObject implements Worker {
-  //  static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
-  //  static int port[] = {2001, 2002, 2003};
-    static int choix;
 
 
     protected WorkerImpl() throws RemoteException { }
@@ -24,13 +21,13 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
         m.map(reader, writer);
         reader.close();
         writer.close();
-        System.out.println("Fini Map " + choix);
+        System.out.println("Fini Map");
         cb.reveiller();
     }
 
     public static void main(String args[]){
         try {
-            choix = Integer.parseInt(args[0]) - 1;
+          //  choix = Integer.parseInt(args[0]) - 1;
             WorkerImpl worker = new WorkerImpl();
             LocateRegistry.createRegistry(Job.PORT);
             Naming.rebind("//localhost:" + Job.PORT + "/worker", worker);

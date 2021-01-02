@@ -1,8 +1,6 @@
 package ordo;
 
-import config.AppData;
-import config.FileData;
-import config.Metadata;
+import config.*;
 import formats.*;
 import hdfs.HdfsClient;
 import map.MapReduce;
@@ -21,8 +19,6 @@ public class Job implements JobInterface{
     String fName;
 
     static public int PORT = 2000;
-    //static String server[] = {"Noeud1", "Noeud2", "Noeud3"};
-    //static int port[] = {2001, 2002, 2003};
 
     public Job(){ }
 
@@ -45,26 +41,31 @@ public class Job implements JobInterface{
             Metadata data = m.getMetadata();
 
             CallBackImpl cb = new CallBackImpl(server.length);
+            Format.Type ft;
+            if (fType.equals(Format.Type.LINE)) ft = Format.Type.KV;
+            else ft = Format.Type.LINE;
+            FileData fd = new FileData(ft, FileData.UNKNOWN_SIZE, FileData.UNKNOWN_SIZE);
 
             for (int i=0 ; i<server.length ; i++ ){
-                FileData fd = new FileData(fType, FileData.UNKNOWN_SIZE, FileData.UNKNOWN_SIZE);
-                data.addFileData(fName+"-res", fd);
+
+                fd.addChunkHandle(i, server[i]);
                 Thread t = new Thread(new Employe(server[i], i, mr, this.fType, this.fName, cb));
                 t.start();
-                m.saveMetadata(data);
             }
 
+            data.addFileData(fName+"-res", fd);
+            HdfsClient.useData(m);
             HdfsClient.HdfsRead(fName+"-res", fName + "-res");
 
             Format frReduce;
             Format fwReduce;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
-                                                 // l'output est obligatoirement le même
-                frReduce = new KVFormat(fName + "-res");
-                fwReduce = new KVFormat(fName + "-tot");
+                // l'output est obligatoirement le même
+                frReduce = new KVFormat(Project.PATH+fName + "-res");
+                fwReduce = new KVFormat(Project.PATH+fName + "-tot");
             } else {
-                frReduce = new KVFormat(fName + "-res");
-                fwReduce = new KVFormat(fName + "-tot");
+                frReduce = new KVFormat(Project.PATH+fName + "-res");
+                fwReduce = new KVFormat(Project.PATH+fName + "-tot");
             }
 
             cb.attente();
@@ -76,17 +77,7 @@ public class Job implements JobInterface{
             System.out.println("Fini Reduce");
 
             HdfsClient.HdfsDelete(fName + "-res");
-        } catch (InterruptedException | RemoteException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -117,15 +108,15 @@ class Employe implements Runnable{
             Format frMap;
             Format fwMap;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
-                                                 // l'output est obligatoirement l'autre
-                frMap = new LineFormat(FileData.chunkName(numServ, fName, Format.Type.LINE));
-                fwMap = new KVFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
+                // l'output est obligatoirement l'autre
+                frMap = new LineFormat(Project.PATH+FileData.chunkName(numServ, fName, Format.Type.LINE));
+                fwMap = new KVFormat(Project.PATH+FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
             } else {
-                frMap = new KVFormat(FileData.chunkName(numServ, fName, Format.Type.KV));
-                fwMap = new LineFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
+                frMap = new KVFormat(Project.PATH+FileData.chunkName(numServ, fName, Format.Type.KV));
+                fwMap = new LineFormat(Project.PATH+FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
             }
 
-           // System.out.println("//"+server+":" + Job.PORT + "/" + server);
+            // System.out.println("//"+server+":" + Job.PORT + "/" + server);
             Worker worker = (Worker) Naming.lookup("//"+server+":" + Job.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
         } catch (NotBoundException exception) {
