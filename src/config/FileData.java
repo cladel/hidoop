@@ -122,7 +122,6 @@ public class FileData implements Serializable{
         void addChunkSource(String ip){
             if (ipList.size() < rep) ipList.add(ip);
             else throw new IndexOutOfBoundsException("Cannot have more than "+rep+" copies of each chunks.");
-            //TODO throw exception sinon?
         }
     }
 }

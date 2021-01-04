@@ -13,12 +13,14 @@ public class Constants {
     public final static byte END_CHUNK_DELIMITER = 0x03; // End of text
     public final static byte NEW_LINE = 0x0a; // End of line
 
+    public final static int MAX_NAME_LENGTH = 80; // Max length of file name
+
     /* Error constants */
     public final static long FILE_EMPTY = -2;
     public final static long FILE_TOO_LARGE = -3;
     public final static long INCONSISTENT_FILE_SIZE = -4;
     public final static long IO_ERROR = -5;
-    public final static long FILE_NOT_FOUND = -10;
+    public final static long FILE_NOT_FOUND = -1;
 
 
 

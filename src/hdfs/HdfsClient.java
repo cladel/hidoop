@@ -65,8 +65,10 @@ public class HdfsClient {
     public static void HdfsWrite(Format.Type fmt, String localFSSourceFname, int repFactor, long chunkSize)
             throws IOException, ExecutionException, InterruptedException {
 
-        if (localFSSourceFname.length() > 80) localFSSourceFname = localFSSourceFname.substring(0,80); //TODO bcs of buffers
+        // Control fileName length because of buffers
+        if (localFSSourceFname.length() > Constants.MAX_NAME_LENGTH) localFSSourceFname = localFSSourceFname.substring(0,Constants.MAX_NAME_LENGTH);
 
+        // Get metadata and servers location
         Metadata data = HdfsClient.data.getMetadata();
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
         if (SERVERS_IP.length == 0) throw new UnsupportedOperationException("No server found.");

@@ -1,5 +1,7 @@
 package config;
 
+import hdfs.Constants;
+
 import java.io.*;
 import java.util.*;
 
@@ -50,11 +52,10 @@ public class Metadata implements Serializable {
 
     /**
      * Add file data
-     * @param name name of the file ( <= 80 chars)
+     * @param name name of the file
      * @param fd file data
      */
     public void addFileData(String name, FileData fd){
-        assert name.length() <= 80; //TODO
         files.put(name, fd);
     }
 
