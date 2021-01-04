@@ -50,7 +50,7 @@ public class Metadata implements Serializable {
 
     /**
      * Add file data
-     * @param name name of the file ( <= 50 chars)
+     * @param name name of the file ( <= 80 chars)
      * @param fd file data
      */
     public void addFileData(String name, FileData fd){

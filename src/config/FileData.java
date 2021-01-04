@@ -8,24 +8,40 @@ import java.util.*;
 /**
  * HDFS file data, including the location of the server(s) where a chunk
  * is stored
+ * Size is only indicative and is not used to verify files' integrity
  */
 public class FileData implements Serializable{
     public static final long serialVersionUID = Metadata.serialVersionUID;
 
-    public static final long UNKNOWN_SIZE = -1;
+    public static final long UNSPECIFIED_SIZE = -1;
 
     private long fileSize; // file size in bytes
     private long chunkSize; // chunks size in bytes
-    private int rep = 1;
-    private Format.Type format;
-    private HashMap<Integer,ChunkSources> chunks;
+    private int rep = 1; // rep count
+    private Format.Type format; // format of file
+    private HashMap<Integer,ChunkSources> chunks; // location of each chunk
 
 
+    /**
+     * FileData of given format and size
+     * @param fmt format
+     * @param size size of file
+     * @param chunkSize average size of chunks
+     */
     public FileData(Format.Type fmt, long size, long chunkSize){
         this.format = fmt;
         this.fileSize = size;
         this.chunkSize = chunkSize;
         this.chunks = new HashMap<>();
+    }
+
+    /**
+     * FileData of given format and unspecified size (ie getFileSize() = getChunkSize() = -1)
+     * Only used when registering a file from the nodes (for example Map results)
+     * @param fmt format
+     */
+    public FileData(Format.Type fmt){
+        this(fmt, UNSPECIFIED_SIZE, UNSPECIFIED_SIZE);
     }
 
     public long getChunkSize() {
@@ -44,6 +60,11 @@ public class FileData implements Serializable{
         return format;
     }
 
+    /**
+     * Register chunk handle
+     * @param chunkId id of the chunk
+     * @param nodeIp ip of server
+     */
     public void addChunkHandle(int chunkId, String nodeIp){
         if(chunks.containsKey(chunkId)){
             chunks.get(chunkId).addChunkSource(nodeIp);
@@ -54,20 +75,37 @@ public class FileData implements Serializable{
         }
     }
 
+    /**
+     * Get number of chunks for this file
+     */
     public int getChunkCount(){
         return chunks.size();
     }
 
+    /**
+     * Get list of chunk ids
+     */
     public ArrayList<Integer> getChunksIds() {
         ArrayList<Integer> idsList = new ArrayList<>(chunks.keySet());
         Collections.sort(idsList);
         return idsList;
     }
 
+    /**
+     * Get list of nodes ip for a given chunk
+     * @param id id of the chunk
+     */
     public List<String> getSourcesForChunk(int id){
         return Collections.unmodifiableList(chunks.get(id).ipList);
     }
 
+    /**
+     * Generate unique chunk name
+     * @param id id of the chunk
+     * @param fname file name
+     * @param fmt format
+     * @return chunk name
+     */
     public static String chunkName(int id, String fname, Format.Type fmt){
         return id + "_" + fname + (fmt == Format.Type.KV ? ".kv" : ".ln");
     }
@@ -83,6 +121,7 @@ public class FileData implements Serializable{
 
         void addChunkSource(String ip){
             if (ipList.size() < rep) ipList.add(ip);
+            else throw new IndexOutOfBoundsException("Cannot have more than "+rep+" copies of each chunks.");
             //TODO throw exception sinon?
         }
     }

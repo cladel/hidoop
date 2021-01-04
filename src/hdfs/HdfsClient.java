@@ -341,7 +341,7 @@ public class HdfsClient {
                 byte[] buf = new byte[Constants.BUFFER_SIZE];
 
                 // Copy bytes to file while receiving expected bytes
-                while ((total < length) && (read = is.read(buf)) > 0) {
+                while (total < length && (read = is.read(buf)) > 0) {
                     //System.out.print(serverIp+" "+id+" <- "+new String(buf, StandardCharsets.UTF_8));
                     out.write(buf,0,read);
                     total += read;
@@ -349,7 +349,7 @@ public class HdfsClient {
 
                 long status = 0;
                 // Check size integrity
-                if (total != length) { //TODO
+                if (total != length) {
                     status = Constants.INCONSISTENT_FILE_SIZE;
                     System.err.println("RD error : "+total+" "+length);
                 }

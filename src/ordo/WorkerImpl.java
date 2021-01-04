@@ -11,6 +11,8 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class WorkerImpl extends UnicastRemoteObject implements Worker {
 
+    static public int PORT = 2000;
+
 
     protected WorkerImpl() throws RemoteException { }
 
@@ -27,10 +29,9 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
 
     public static void main(String args[]){
         try {
-          //  choix = Integer.parseInt(args[0]) - 1;
             WorkerImpl worker = new WorkerImpl();
-            LocateRegistry.createRegistry(Job.PORT);
-            Naming.rebind("//localhost:" + Job.PORT + "/worker", worker);
+            LocateRegistry.createRegistry(PORT);
+            Naming.rebind("//localhost:" + PORT + "/worker", worker);
         } catch (RemoteException | MalformedURLException e) {
             e.printStackTrace();
         }

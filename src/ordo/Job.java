@@ -18,8 +18,6 @@ public class Job implements JobInterface{
     Format.Type fType;
     String fName;
 
-    static public int PORT = 2000;
-
     public Job(){ }
 
     @Override
@@ -36,21 +34,26 @@ public class Job implements JobInterface{
     public void startJob(MapReduce mr) {
 
         try {
+            // Recuperer les metadonnées et les ip des serveurs
             AppData m = AppData.loadConfigAndMeta(false);
             String [] server = m.getServersIp();
             Metadata data = m.getMetadata();
 
             CallBackImpl cb = new CallBackImpl(server.length);
             Format.Type ft;
+            FileData fd;
+
             if (fType.equals(Format.Type.LINE)) ft = Format.Type.KV;
             else ft = Format.Type.LINE;
-            FileData fd = new FileData(ft, FileData.UNKNOWN_SIZE, FileData.UNKNOWN_SIZE);
 
+            // Creation d'un FileData pour le fichier des résultats de map, sans spécifier sa taille
+            fd = new FileData(ft);
+
+            // Calculer et répertorier les résultats des maps
             for (int i=0 ; i<server.length ; i++ ){
-
-                fd.addChunkHandle(i, server[i]);
                 Thread t = new Thread(new Employe(server[i], i, mr, this.fType, this.fName, cb));
                 t.start();
+                fd.addChunkHandle(i, server[i]);
             }
 
             data.addFileData(fName+"-res", fd);
@@ -115,9 +118,7 @@ class Employe implements Runnable{
                 frMap = new KVFormat(Project.PATH+FileData.chunkName(numServ, fName, Format.Type.KV));
                 fwMap = new LineFormat(Project.PATH+FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
             }
-
-            // System.out.println("//"+server+":" + Job.PORT + "/" + server);
-            Worker worker = (Worker) Naming.lookup("//"+server+":" + Job.PORT + "/worker");
+            Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
         } catch (NotBoundException exception) {
             exception.printStackTrace();
