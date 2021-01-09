@@ -90,9 +90,9 @@ class Employe implements Runnable{
     private final CallBackImpl cb;
     private final int numServ;
     private final MapReduce mr;
-    private Format.Type fType;
-    private String fName;
-    private String server;
+    private final Format.Type fType;
+    private final String fName;
+    private final String server;
 
 
     public Employe(String server, int nb, MapReduce mr, Format.Type fType, String fName, CallBackImpl cb){

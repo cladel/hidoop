@@ -18,13 +18,8 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
 
     @Override
     public void runMap(Mapper m, Format reader, Format writer, CallBack cb) throws RemoteException {
-        reader.open(Format.OpenMode.R);
-        writer.open(Format.OpenMode.W);
-        m.map(reader, writer);
-        reader.close();
-        writer.close();
-        System.out.println("Fini Map");
-        cb.reveiller();
+        Thread t = new Thread(new RunMap(m, reader, writer, cb));
+        t.start();
     }
 
     public static void main(String args[]){
@@ -33,6 +28,35 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
             LocateRegistry.createRegistry(PORT);
             Naming.rebind("//localhost:" + PORT + "/worker", worker);
         } catch (RemoteException | MalformedURLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class RunMap implements Runnable {
+    private final Mapper map;
+    private final Format reader;
+    private final Format writer;
+    private final CallBack cb;
+
+    public RunMap(Mapper m, Format reader, Format writer, CallBack cb){
+        this.map = m;
+        this.reader = reader;
+        this.writer = writer;
+        this.cb = cb;
+    }
+
+    @Override
+    public void run() {
+        reader.open(Format.OpenMode.R);
+        writer.open(Format.OpenMode.W);
+        map.map(reader, writer);
+        reader.close();
+        writer.close();
+        System.out.println("Fini Map");
+        try {
+            cb.reveiller();
+        } catch (RemoteException e) {
             e.printStackTrace();
         }
     }
