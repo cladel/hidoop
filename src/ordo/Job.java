@@ -64,11 +64,11 @@ public class Job implements JobInterface{
             Format fwReduce;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
                 // l'output est obligatoirement le même
-                frReduce = new KVFormat(Project.PATH+fName + "-res");
-                fwReduce = new KVFormat(Project.PATH+fName + "-tot");
+                frReduce = new KVFormat(Project.getDataPath()+fName + "-res");
+                fwReduce = new KVFormat(Project.getDataPath()+fName + "-tot");
             } else {
-                frReduce = new KVFormat(Project.PATH+fName + "-res");
-                fwReduce = new KVFormat(Project.PATH+fName + "-tot");
+                frReduce = new KVFormat(Project.getDataPath()+fName + "-res");
+                fwReduce = new KVFormat(Project.getDataPath()+fName + "-tot");
             }
 
             cb.attente();
@@ -112,11 +112,11 @@ class Employe implements Runnable{
             Format fwMap;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
                 // l'output est obligatoirement l'autre
-                frMap = new LineFormat(Project.PATH+FileData.chunkName(numServ, fName, Format.Type.LINE));
-                fwMap = new KVFormat(Project.PATH+FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
+                frMap = new LineFormat(Project.getDataPath()+FileData.chunkName(numServ, fName, Format.Type.LINE));
+                fwMap = new KVFormat(Project.getDataPath()+FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
             } else {
-                frMap = new KVFormat(Project.PATH+FileData.chunkName(numServ, fName, Format.Type.KV));
-                fwMap = new LineFormat(Project.PATH+FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
+                frMap = new KVFormat(Project.getDataPath()+FileData.chunkName(numServ, fName, Format.Type.KV));
+                fwMap = new LineFormat(Project.getDataPath()+FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
             }
             Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);

@@ -39,7 +39,7 @@ public class AppData {
     public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        File fileXML = new File(Project.PATH+"conf.xml");
+        File fileXML = new File(Project.getConfigPath()+"conf.xml");
         if (fileXML.exists()) {
             // If file exists parse xml
             Document xml = builder.parse(fileXML);
@@ -55,11 +55,11 @@ public class AppData {
                 ld.serversIp[i] = e.getAttribute("ip");
             }
 
-            ld.metadata = Metadata.load(new File(Project.PATH + ld.DATAFILE_NAME), createIfNotFound);
+            ld.metadata = Metadata.load(new File(Project.getDataPath() + ld.DATAFILE_NAME), createIfNotFound);
 
             return ld;
         } else {
-            throw new FileNotFoundException("No conf.xml found.");
+            throw new FileNotFoundException("No conf.xml found in "+Project.getConfigPath()+".");
         }
     }
 
@@ -68,7 +68,7 @@ public class AppData {
      * @param data metadata object
      */
     public void saveMetadata(Metadata data) throws IOException {
-        Metadata.save(new File(Project.PATH + DATAFILE_NAME),data);
+        Metadata.save(new File(Project.getDataPath() + DATAFILE_NAME),data);
     }
 
 

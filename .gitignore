@@ -1,6 +1,5 @@
 # Ignore :
 /*
-/src/config/Project.java
 *.class
 
 # Except for :

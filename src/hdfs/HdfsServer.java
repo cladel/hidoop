@@ -55,7 +55,7 @@ public class HdfsServer {
                             long minFileSize = Long.parseLong(args[2]);
 
                             // Confirmation allocation possible sur le serveur
-                            File dir = new File(Project.PATH);
+                            File dir = new File(Project.getDataPath());
                             if (dir.getUsableSpace() <= 2 * minFileSize){
                                 Constants.putLong(buf, Constants.FILE_TOO_LARGE);
                                 ouS.write(buf,0,Long.BYTES);
@@ -71,7 +71,7 @@ public class HdfsServer {
                             byte[] buffer = new byte[Constants.BUFFER_SIZE];
 
                             /* Fichier crée */
-                            File fichier = new File(Project.PATH + nameFile);
+                            File fichier = new File(Project.getDataPath() + nameFile);
                             FileOutputStream fileStream = new FileOutputStream(fichier);
 
                             int end = -1;
@@ -117,7 +117,7 @@ public class HdfsServer {
                             nameFile = args[1];
 
                             /* Sending file */
-                            File fichier = new File(Project.PATH + nameFile);
+                            File fichier = new File(Project.getDataPath() + nameFile);
 
                             if (fichier.exists()) {
                                 /** Envoi de la taille du chunk */
@@ -147,7 +147,7 @@ public class HdfsServer {
                             nameFile = args[1];
 
                             /* Suppression du fichier */
-                            File fichier = new File(Project.PATH + nameFile);
+                            File fichier = new File(Project.getDataPath() + nameFile);
 
                             if (fichier.exists()) {
                                 fichier.delete();

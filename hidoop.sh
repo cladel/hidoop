@@ -2,14 +2,13 @@
 
 
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
-nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
+nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
 
 
 cd $HIDOOP_CLASSES
 
 function start()
 {
-classes_dir=$(pwd)
 
 echo "Starting servers..."
 # Lancer chaque serveur
@@ -17,7 +16,7 @@ for s in ${nodes[@]}
 do
 
 echo " - $s"
-ssh $s "cd $classes_dir && java hdfs.HdfsServer & java ordo.WorkerImpl &"
+ssh $s "cd $HIDOOP_CLASSES && java hdfs.HdfsServer & java ordo.WorkerImpl &"
 
 done
 
@@ -36,6 +35,13 @@ function quit()
    exit 0
 }
 
+echo
+echo '(**********************)'
+echo '(******* HIDOOP *******)'
+echo '(*******  v1.0  *******)'
+echo '(**********************)'
+echo
+
 while true
 do
 	read -p " > " cmd;
@@ -50,8 +56,8 @@ do
 	hdfs*)
     eval "${cmd/hdfs/'java hdfs.HdfsClient'}"
 	  ;;
-	MyMapReduce*)
-	  eval "${cmd/MyMapReduce/'java application.MyMapReduce'}"
+	mmr*)
+	  eval "${cmd/mmr/'java application.MyMapReduce'}"
 	  ;;
 	*)
 	  eval $cmd

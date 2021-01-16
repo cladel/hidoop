@@ -73,7 +73,7 @@ public class HdfsClient {
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
         if (SERVERS_IP.length == 0) throw new UnsupportedOperationException("No server found.");
 
-        final File local = new File(Project.PATH+localFSSourceFname);
+        final File local = new File(Project.getDataPath()+localFSSourceFname);
         long size = local.length(); // size in bytes
         int start = 0;
 
@@ -158,7 +158,7 @@ public class HdfsClient {
         FileData fd = data.retrieveFileData(hdfsFname);
         if (fd == null) throw new FileNotFoundException(hdfsFname);
 
-        File local = new File(Project.PATH+localFSDestFname);
+        File local = new File(Project.getDataPath()+localFSDestFname);
         if (local.exists()) throw new FileAlreadyExistsException(localFSDestFname);
         local.createNewFile();
 
@@ -308,7 +308,7 @@ public class HdfsClient {
         public Read(String name, int id, String serverIp) throws IOException {
             this.command = Commands.HDFS_READ.toString() + " " + name;
             String tmpName = name + ".tmp";
-            this.local = new File(Project.PATH+tmpName);
+            this.local = new File(Project.getDataPath()+tmpName);
             local.createNewFile();
             this.serverIp = serverIp;
             this.id = id;
