@@ -1,7 +1,5 @@
 package config;
 
-import hdfs.Constants;
-
 import java.io.*;
 import java.util.*;
 

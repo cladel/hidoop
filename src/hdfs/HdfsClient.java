@@ -134,7 +134,8 @@ public class HdfsClient {
 
         // Save updated metadata
         if (allOk) {
-            if (isNew) data.addFileData(localFSSourceFname, fd);
+            //if (isNew)
+            data.addFileData(localFSSourceFname, fd);
             HdfsClient.data.saveMetadata(data);
             System.out.println(localFSSourceFname + " successfully saved.");
         }
@@ -572,7 +573,7 @@ public class HdfsClient {
     }
 
     /**
-     * Use given configuration
+     * Use given configuration.
      * Calling any method from code without setting this first will result in
      * a NullPointerException.
      * @param data config and metadata

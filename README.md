@@ -19,3 +19,14 @@ Un fichier d'exemple est donné ci-dessous :
 
 Les informations sur les serveurs sont chargées dans ***AppData***. 
 Informations et métadonnées peuvent être chargées via la méthode *loadConfigAndMeta()*.
+
+##### Script de lancement 
+Le script *hidoop.sh* permet de lancer / arrêter automatiquement les serveurs indiqués dans le fichier de configuration *conf.xml* via ssh (machines N7).
+Il utilise 2 variables système :
+- **HIDOOP_CLASSES** = localisation des classes java de l'application
+- **HIDOOP_HOME** = localisation des fichiers de l'application, comme dans config.Projet
+
+On peut lancer les commandes suivantes, en plus de celles utilisant java :  
+ - ***start*** pour lancer les serveurs 
+ - ***exit*** pour quitter et fermer les serveurs
+
