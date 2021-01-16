@@ -29,4 +29,6 @@ Il utilise 2 variables système :
 On peut lancer les commandes suivantes, en plus de celles utilisant java :  
  - ***start*** pour lancer les serveurs 
  - ***exit*** pour quitter et fermer les serveurs
+ - ***hdfs*** raccourci pour java hdfs.HdfsClient
+
 

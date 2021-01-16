@@ -41,11 +41,17 @@ do
 	read -p " > " cmd;
 
 	case $cmd in
-	"exit")
+	exit)
 	  quit
 	  ;;
-	"start")
+	start)
 	  start
+	  ;;
+	hdfs*)
+    eval "${cmd/hdfs/'java hdfs.HdfsClient'}"
+	  ;;
+	MyMapReduce*)
+	  eval "${cmd/MyMapReduce/'java application.MyMapReduce'}"
 	  ;;
 	*)
 	  eval $cmd
