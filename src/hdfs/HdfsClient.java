@@ -24,10 +24,10 @@ public class HdfsClient {
 
     private static void usage() {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
-                "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes>|distributed ] [ --rep=<repFactor> ] " +
+                "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes> ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
                 "| -l }\n"+
-                "Default format is ln. Default chunk sizing mode is distributed.\n" +
+                "Default format is ln. \n" +
                 "--rep is currently not supported and is always 1.");
     }
 
@@ -89,8 +89,9 @@ public class HdfsClient {
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
 
-        // Adapt size to get k <= N chunks
-        if (chunkSize <= 0) chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
+        // Use default size
+        if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
+
 
         // Count chunks
         int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
@@ -506,7 +507,7 @@ public class HdfsClient {
 
                 if (written != totalWritten){
                     status = Constants.INCONSISTENT_FILE_SIZE;
-                    System.out.println(id+" WR error : "+written+" / "+totalWritten);
+                    if (verbose) System.out.println(id+" WR error : "+written+" / "+totalWritten);
                 }
 
 
@@ -628,11 +629,10 @@ public class HdfsClient {
                             next += 2;
                         } else if (args[next].startsWith("--chunks-size=")) {
                             String mode = args[next].substring("--chunks-size=".length());
-                            if (mode.equals("distributed")) chunksMode = -1;
-                            else if(mode.matches("[-]?[0-9]+")) chunksMode = Long.parseLong(mode);
+                            chunksMode = Long.parseLong(mode);
                             next++;
                         } else if (args[next].startsWith("--rep=")){
-                            /*
+                            /* pas utile pour cette version
                             String r = args[next].substring("--rep=".length());
                             if(r.matches("[0-9]+")) rep = Integer.parseInt(r);
                             else {

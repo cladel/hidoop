@@ -4,7 +4,8 @@
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
 nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
 
-
+# Valeur par défaut de HIDOOP_CLASSES
+[[ -z "${HIDOOP_CLASSES}" ]] && HIDOOP_CLASSES=$HIDOOP_HOME/src
 cd $HIDOOP_CLASSES
 
 function start()

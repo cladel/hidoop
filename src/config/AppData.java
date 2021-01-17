@@ -24,6 +24,8 @@ public class AppData {
     private String[] serversIp;
     // Metadata file name
     private final String DATAFILE_NAME;
+    // Default chunk size
+    private long default_chunk_size =  64 * 1000000; // 64 MB
 
 
     private AppData(String datafile) {
@@ -47,12 +49,34 @@ public class AppData {
             Element root = xml.getDocumentElement();
             AppData ld = new AppData(root.getAttribute("metadata"));
 
-            NodeList nlist = root.getElementsByTagName("node");
+            NodeList nlist;
+            nlist = root.getElementsByTagName("node");
             int l = nlist.getLength();
             ld.serversIp = new String[l];
             for (int i = 0; i < l; i++) {
                 Element e = (Element) nlist.item(i);
                 ld.serversIp[i] = e.getAttribute("ip");
+            }
+
+            nlist = root.getElementsByTagName("default-chunk-size");
+
+            if (nlist.getLength() > 0){
+                Element e = (Element) nlist.item(0);
+                ld.default_chunk_size = Long.parseLong(e.getAttribute("value"));
+
+                // Adjusting value to unit : if unit is 'bytes' or unknown then use bytes
+                switch (e.getAttribute("unit")){
+                    case "kB":
+                        ld.default_chunk_size *= 1000;
+                        break;
+                    case "MB":
+                        ld.default_chunk_size *= 1000000;
+                        break;
+                    case "GB":
+                        ld.default_chunk_size *= 1000000000L;
+                        break;
+
+                }
             }
 
             ld.metadata = Metadata.load(new File(Project.getDataPath() + ld.DATAFILE_NAME), createIfNotFound);
@@ -84,5 +108,13 @@ public class AppData {
      */
     public Metadata getMetadata() {
         return metadata;
+    }
+
+    /**
+     *
+     * @return defaultChunkSize
+     */
+    public long getDefaultChunkSize() {
+        return default_chunk_size;
     }
 }
