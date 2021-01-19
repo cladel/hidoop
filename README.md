@@ -35,14 +35,15 @@ Un fichier d'exemple est donné ci-dessous :
 Ce fichier est utilisé par la classe ***config.AppData***. 
 
 ### Script de lancement 
-Le script *hidoop.sh* permet de lancer / arrêter automatiquement les serveurs indiqués dans le fichier de configuration *conf.xml* via ssh (machines N7).
+Le script *hidoop.sh* ouvre un shell permettant de lancer / arrêter automatiquement les serveurs indiqués dans le fichier de configuration *conf.xml* via ssh (machines N7).
 Le répertoire où les commandes sont exécutées est ***HIDOOP_HOME***/*src* par défaut, mais il est possible de définir une variable système **HIDOOP_CLASSES** qui indique la localisation des classes java de l'application.
 
 On peut lancer n'importe quelle commande, plus les suivantes :  
  - ***start*** pour lancer les serveurs 
- - ***exit*** pour quitter et fermer les serveurs
- - ***hdfs*** raccourci pour java hdfs.HdfsClient, suivi des mêmes arguments
- - ***mmr*** raccourci pour java application.MyMapReduce, suivi des mêmes arguments 
+ - ***stop*** pour arrêter les serveurs
+ - ***hdfs*** alias pour java hdfs.HdfsClient, suivi des mêmes arguments
+ - ***mmr*** alias pour java application.MyMapReduce, suivi des mêmes arguments 
+ - ***exit*** pour quitter le shell
 
 
 ### Compilation
@@ -56,6 +57,7 @@ javac application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java h
 Ou, pour spécifier un répertoire particulier pour les classes :
 ```bash
 export HIDOOP_HOME=/path/to/hidoop
+export HIDOOP_CLASSES=/path/to/class/files
 cd $HIDOOP_HOME/src
 javac -d $HIDOOP_CLASSES  application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java hdfs/HdfsClient.java hdfs/HdfsServer.java
 ```
