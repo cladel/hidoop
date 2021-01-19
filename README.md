@@ -16,8 +16,6 @@ Ce répertoire correspond à l'arborescence de fichiers suivante :
 ##### Configuration de Hidoop
 La variable système **HIDOOP_HOME** est nécessaire au fonctionnement de Hidoop. Il s'agit de la localisation du répertoire *hidoop*, utilisé dans config.Projet.PATH .
 
-  <span style="color:green">*Commande : **export HIDOOP_HOME=path/to/hidoop***</span>
-
 La configuration se fait via un fichier *conf.xml* placé dans le répertoire **HIDOOP_HOME/config/**.
 Un fichier d'exemple est donné ci-dessous :
 ```xml
@@ -50,12 +48,14 @@ On peut lancer n'importe quelle commande, plus les suivantes :
 ##### Compilation
 
 ```bash
+export HIDOOP_HOME=/path/to/hidoop
 cd $HIDOOP_HOME/src
 javac application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java hdfs/HdfsClient.java hdfs/HdfsServer.java
 ```
  
 Pour spécifier un répertoire particulier pour les classes :
 ```bash
+export HIDOOP_HOME=/path/to/hidoop
 cd $HIDOOP_HOME/src
 javac -d $HIDOOP_CLASSES  application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java hdfs/HdfsClient.java hdfs/HdfsServer.java
 ```
