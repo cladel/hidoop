@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Dossier hidoop
-export HIDOOP_HOME=$(pwd)
-# Dossier contenant les fichiers .class de l'application
-#export HIDOOP_CLASSES=$HIDOOP_HOME/out/production/hidoop/
-
-
+# Verifier que HIDOOP_HOME est défini
+if [[ -z "${HIDOOP_HOME}" ]]; then
+  echo "Error: HIDOOP_HOME is undefined."
+  exit 1
+fi
 # Verifier la présence du fichier conf.xml
 cd $HIDOOP_HOME
 if [ ! -f "config/conf.xml" ]; then
