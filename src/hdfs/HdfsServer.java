@@ -187,9 +187,9 @@ public class HdfsServer {
     public static void main (String args[]) {
         try {
             // Indiquer le démarrage pour les log
-            System.out.println("Startup : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+            System.out.println("HDFS start : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
             // Indiquer l'arret pour les log
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("Shutdown : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) )));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("HDFS stop : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) )));
             ServerSocket server = new ServerSocket(Constants.PORT);
             while (true) {
                 Socket socket = server.accept();

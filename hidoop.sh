@@ -5,9 +5,9 @@ if [[ -z "${HIDOOP_HOME}" ]]; then
   echo "Error: HIDOOP_HOME is undefined."
   exit 1
 fi
+
 # Verifier la présence du fichier conf.xml
-cd $HIDOOP_HOME
-if [ ! -f "config/conf.xml" ]; then
+if [ ! -f "$HIDOOP_HOME/config/conf.xml" ]; then
     echo "$HIDOOP_HOME/config/conf.xml not found."
     exit 1
 fi
@@ -35,7 +35,7 @@ do
 
   echo " - \$s"
   javacmd=\$(echo "<hdfs.HdfsServer><ordo.WorkerImpl>" | sed "s|<\([^<>]*\)>|nohup java -cp $HIDOOP_CLASSES \1 >> $HIDOOP_HOME/\$s.log 2>\&1 \& |g ")
-  ssh -v \$s "export HIDOOP_HOME=$HIDOOP_HOME & \${javacmd}"
+  ssh \$s "export HIDOOP_HOME=$HIDOOP_HOME & \${javacmd}"
 
 done
 
@@ -56,8 +56,7 @@ function stop()
 alias hdfs='java hdfs.HdfsClient'
 alias mmr='java application.MyMapReduce'
 
-
-cd $HIDOOP_CLASSES
+cd "$HIDOOP_CLASSES" || exit
 
 PS1="hidoop> "
 

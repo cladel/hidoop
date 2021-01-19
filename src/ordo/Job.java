@@ -129,7 +129,7 @@ class Employe implements Runnable{
             }
             Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
-        } catch (NotBoundException exception) {
+        } catch (NotBoundException | MalformedURLException | RemoteException exception) {
             exception.printStackTrace();
         } catch (MalformedURLException e) {
             e.printStackTrace();

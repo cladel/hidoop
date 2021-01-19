@@ -31,6 +31,19 @@ public class HdfsClient {
                 "--rep is currently not supported and is always 1.");
     }
 
+    /**
+     * Get path for file.
+     * If the given file name starts with '/' it is considered as an absolute path
+     * and will be used as such. Otherwise, the relative path in $HIDOOP_HOME will
+     * be used.
+     * @param file If empty, returns $HIDOOP_HOME/data.
+     * @return path for this file
+     */
+    private static String getPathForFile(String file){
+        if (file.trim().charAt(0)=='/') return file; // Chemin absolu
+        else return Project.getDataPath(); // Chemin relatif à HIDOOP_HOME
+    }
+
 
     /**
      * Print file list
@@ -73,7 +86,9 @@ public class HdfsClient {
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
         if (SERVERS_IP.length == 0) throw new UnsupportedOperationException("No server found.");
 
-        final File local = new File(Project.getDataPath()+localFSSourceFname);
+        final File local = new File(getPathForFile(localFSSourceFname));
+        localFSSourceFname = local.getName();
+
         long size = local.length(); // size in bytes
         int start = 0;
 
@@ -159,7 +174,8 @@ public class HdfsClient {
         FileData fd = data.retrieveFileData(hdfsFname);
         if (fd == null) throw new FileNotFoundException(hdfsFname);
 
-        File local = new File(Project.getDataPath()+localFSDestFname);
+        File local = new File(getPathForFile(localFSDestFname));
+        localFSDestFname = local.getName();
         if (local.exists()) throw new FileAlreadyExistsException(localFSDestFname);
         local.createNewFile();
 
@@ -309,7 +325,7 @@ public class HdfsClient {
         public Read(String name, int id, String serverIp) throws IOException {
             this.command = Commands.HDFS_READ.toString() + " " + name;
             String tmpName = name + ".tmp";
-            this.local = new File(Project.getDataPath()+tmpName);
+            this.local = new File(Project.getDataPath()+(tmpName));
             local.createNewFile();
             this.serverIp = serverIp;
             this.id = id;
