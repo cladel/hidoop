@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Verifier que HIDOOP_HOME est défini
 if [[ -z "${HIDOOP_HOME}" ]]; then
   echo "Error: HIDOOP_HOME is undefined."
@@ -17,7 +16,7 @@ fi
 [[ -z "${HIDOOP_CLASSES}" ]] && HIDOOP_CLASSES=$HIDOOP_HOME/src
 
 
-# Script d'initialisation du shell pour l'application
+# Shell pour l'application
 temp=$(cat <<EOF
 
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
@@ -34,45 +33,35 @@ echo "Starting servers..."
 for s in \${nodes[@]}
 do
 
-echo " - \$s"
-
-ssh -v \$s "export HIDOOP_HOME=$HIDOOP_HOME & nohup java -cp $HIDOOP_CLASSES hdfs.HdfsServer >> $HIDOOP_HOME/$s.log 2>&1 & nohup java -cp $HIDOOP_CLASSES ordo.WorkerImpl >> $HIDOOP_HOME/$s.log 2>&1 & "
+  echo " - \$s"
+  javacmd=\$(echo "<hdfs.HdfsServer><ordo.WorkerImpl>" | sed "s|<\([^<>]*\)>|nohup java -cp $HIDOOP_CLASSES \1 >> $HIDOOP_HOME/\$s.log 2>\&1 \& |g ")
+  ssh -v \$s "export HIDOOP_HOME=$HIDOOP_HOME & \${javacmd}"
 
 done
 
-echo "Hidoop servers ready."
 }
 
 # A la fermeture tuer les serveurs
 function stop()
 {
+   echo "Stopping servers..."
+
    for s in \${nodes[@]}
    do
-
-	ssh -v \$s "pkill -f 'java .*(ordo.*|hdfs.*)' "
-
+	    ssh \$s "pkill -f 'java .*(ordo.*|hdfs.*)' "
    done
-   exit 0
 }
 
 # Alias fonctionnalités
 alias hdfs='java hdfs.HdfsClient'
-alias mmp='java application.MyMapReduce'
+alias mmr='java application.MyMapReduce'
 
 
 cd $HIDOOP_CLASSES
-
-echo
-echo '(**********************)'
-echo '(******* HIDOOP *******)'
-echo '(*******  v1.0  *******)'
-echo '(**********************)'
-echo
 
 PS1="hidoop> "
 
 EOF
 )
 
-# Lancement du shell
 bash --init-file <(echo "$temp")

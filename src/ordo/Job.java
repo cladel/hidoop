@@ -7,6 +7,7 @@ import map.MapReduce;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
@@ -58,7 +59,14 @@ public class Job implements JobInterface{
 
             data.addFileData(fName+"-res", fd);
             HdfsClient.useData(m);
+
+            // Attente avant de récupérer les résultats des workers
+            cb.attente();
+
+            // Récupération
             HdfsClient.HdfsRead(fName+"-res", fName + "-res");
+            File tmp = new File(Project.getDataPath()+fName + "-res");
+            if (!tmp.exists()) throw new RuntimeException("Erreur de récupération des chunks.");
 
             Format frReduce;
             Format fwReduce;
@@ -71,7 +79,6 @@ public class Job implements JobInterface{
                 fwReduce = new KVFormat(Project.getDataPath()+fName + "-tot");
             }
 
-            cb.attente();
             frReduce.open(Format.OpenMode.R);
             fwReduce.open(Format.OpenMode.W);
             mr.reduce(frReduce, fwReduce);
@@ -80,6 +87,8 @@ public class Job implements JobInterface{
             System.out.println("Fini Reduce");
 
             HdfsClient.HdfsDelete(fName + "-res");
+            tmp.deleteOnExit();
+
         } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
             e.printStackTrace();
         }

@@ -25,7 +25,7 @@ public class AppData {
     // Metadata file name
     private final String DATAFILE_NAME;
     // Default chunk size
-    private long defaultChunkSize =  64 * 1000000; // 64 MB
+    private long defaultChunkSize =  64 * 1024 * 1024; // 64 MB
 
 
     private AppData(String datafile) {
@@ -55,6 +55,7 @@ public class AppData {
             NodeList nlist;
             nlist = root.getElementsByTagName("node");
             int l = nlist.getLength();
+            if (l == 0) throw new IllegalStateException("Server list cannot be empty.");
             ld.serversIp = new String[l];
             for (int i = 0; i < l; i++) {
                 Element e = (Element) nlist.item(i);
@@ -69,14 +70,13 @@ public class AppData {
 
                 // Adjusting value to unit : if unit is 'bytes' or unknown then use bytes
                 switch (e.getAttribute("unit").toUpperCase()){
-                    case "KB":
-                        ld.defaultChunkSize *= 1000;
-                        break;
-                    case "MB":
-                        ld.defaultChunkSize *= 1000000;
-                        break;
+
                     case "GB":
-                        ld.defaultChunkSize *= 1000000000L;
+                        ld.defaultChunkSize *= 1024;
+                    case "MB":
+                        ld.defaultChunkSize *= 1024;
+                    case "KB":
+                        ld.defaultChunkSize *= 1024;
                         break;
 
                 }

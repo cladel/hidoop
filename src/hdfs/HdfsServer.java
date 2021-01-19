@@ -6,6 +6,8 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 
 public class HdfsServer {
@@ -32,11 +34,11 @@ public class HdfsServer {
             inS.readNBytes(buf, 0, Constants.CMD_BUFFER_SIZE);
 
             /** ToString + Split */
-            String message = new String (buf, StandardCharsets.UTF_8);
+            String message = new String (buf, StandardCharsets.UTF_8).trim();
 
             /** First message : command */
             System.out.println("CMD : "+message);
-            String[] args = message.trim().split(Constants.SEPARATOR);
+            String[] args = message.split(Constants.SEPARATOR);
             Commands cmd = Commands.fromString(args[0]);
             if (cmd != null) {
 
@@ -138,6 +140,7 @@ public class HdfsServer {
                                 /* File doesn't exist */
                                 Constants.putLong(buf, Constants.FILE_NOT_FOUND);
                                 ouS.write(buf,0,Long.BYTES);
+                                System.err.println(fichier.getName()+" not found.");
                             }
                         }
                         break;
@@ -161,6 +164,7 @@ public class HdfsServer {
                                 /* File doesn't exist */
                                 Constants.putLong(buf, Constants.FILE_NOT_FOUND);
                                 ouS.write(buf,0,Long.BYTES);
+                                System.err.println(fichier.getName()+" not found.");
                             }
                         }
                         break;
@@ -182,6 +186,10 @@ public class HdfsServer {
 
     public static void main (String args[]) {
         try {
+            // Indiquer le démarrage pour les log
+            System.out.println("Startup : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+            // Indiquer l'arret pour les log
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("Shutdown : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) )));
             ServerSocket server = new ServerSocket(Constants.PORT);
             while (true) {
                 Socket socket = server.accept();

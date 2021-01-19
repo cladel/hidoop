@@ -29,6 +29,7 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
             Naming.rebind("//localhost:" + PORT + "/worker", worker);
         } catch (RemoteException | MalformedURLException e) {
             e.printStackTrace();
+            System.exit(1);
         }
     }
 }
