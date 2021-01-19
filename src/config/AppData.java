@@ -25,7 +25,7 @@ public class AppData {
     // Metadata file name
     private final String DATAFILE_NAME;
     // Default chunk size
-    private long default_chunk_size =  64 * 1000000; // 64 MB
+    private long defaultChunkSize =  64 * 1000000; // 64 MB
 
 
     private AppData(String datafile) {
@@ -40,6 +40,9 @@ public class AppData {
      */
     public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
 
+        if (Project.PATH == null) {
+            throw new IllegalStateException("HIDOOP_HOME is undefined.");
+        }
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         File fileXML = new File(Project.getConfigPath()+"conf.xml");
         if (fileXML.exists()) {
@@ -62,18 +65,18 @@ public class AppData {
 
             if (nlist.getLength() > 0){
                 Element e = (Element) nlist.item(0);
-                ld.default_chunk_size = Long.parseLong(e.getAttribute("value"));
+                ld.defaultChunkSize = Long.parseLong(e.getAttribute("value"));
 
                 // Adjusting value to unit : if unit is 'bytes' or unknown then use bytes
-                switch (e.getAttribute("unit")){
-                    case "kB":
-                        ld.default_chunk_size *= 1000;
+                switch (e.getAttribute("unit").toUpperCase()){
+                    case "KB":
+                        ld.defaultChunkSize *= 1000;
                         break;
                     case "MB":
-                        ld.default_chunk_size *= 1000000;
+                        ld.defaultChunkSize *= 1000000;
                         break;
                     case "GB":
-                        ld.default_chunk_size *= 1000000000L;
+                        ld.defaultChunkSize *= 1000000000L;
                         break;
 
                 }
@@ -115,6 +118,6 @@ public class AppData {
      * @return defaultChunkSize
      */
     public long getDefaultChunkSize() {
-        return default_chunk_size;
+        return defaultChunkSize;
     }
 }

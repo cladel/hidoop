@@ -2,6 +2,7 @@ package hdfs;
 import config.Project;
 
 import java.io.*;
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -56,7 +57,9 @@ public class HdfsServer {
 
                             // Confirmation allocation possible sur le serveur
                             File dir = new File(Project.getDataPath());
-                            if (dir.getUsableSpace() <= 2 * minFileSize){
+                            long usable = dir.getUsableSpace();
+                            if (usable <= 2 * minFileSize){
+                                System.err.println("Erreur espace insuffisant : "+ usable + " bytes.");
                                 Constants.putLong(buf, Constants.FILE_TOO_LARGE);
                                 ouS.write(buf,0,Long.BYTES);
                                 socket.close();
@@ -185,6 +188,9 @@ public class HdfsServer {
                 Slave slave = new Slave(socket);
                 slave.start();
             }
+        } catch (BindException be){
+            be.printStackTrace();
+            System.exit(1);
         } catch (Exception e){
             e.printStackTrace();
         }

@@ -1,13 +1,22 @@
 #!/bin/bash
 
+# Dossier hidoop
+export HIDOOP_HOME=$(pwd)
+# Dossier contenant les fichiers .class de l'application
+#export HIDOOP_CLASSES=$HIDOOP_HOME/out/production/hidoop/
+
+
+# Verifier la présence du fichier conf.xml
+cd $HIDOOP_HOME
+if [ ! -f "config/conf.xml" ]; then
+    echo "$HIDOOP_HOME/config/conf.xml not found."
+    exit 1
+fi
 
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
 nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
 
-# Valeur par défaut de HIDOOP_CLASSES
-[[ -z "${HIDOOP_CLASSES}" ]] && HIDOOP_CLASSES=$HIDOOP_HOME/src
-cd $HIDOOP_CLASSES
-
+# Démarrage des serveurs
 function start()
 {
 
@@ -17,7 +26,8 @@ for s in ${nodes[@]}
 do
 
 echo " - $s"
-ssh $s "cd $HIDOOP_CLASSES && java hdfs.HdfsServer & java ordo.WorkerImpl &"
+
+ssh -v $s "export HIDOOP_HOME=$HIDOOP_HOME & nohup java -cp $HIDOOP_CLASSES hdfs.HdfsServer >> $HIDOOP_HOME/$s.log 2>&1 & nohup java -cp $HIDOOP_CLASSES ordo.WorkerImpl >> $HIDOOP_HOME/$s.log 2>&1 & "
 
 done
 
@@ -30,12 +40,15 @@ function quit()
    for s in ${nodes[@]}
    do
 
-	ssh $s "pkill -f 'java hdfs.HdfsServer' &&  pkill -f 'java ordo.WorkerImpl'"
+	ssh -v $s "pkill -f 'java .*(ordo.*|hdfs.*)' "
 
    done
    exit 0
 }
 
+# Valeur par défaut de HIDOOP_CLASSES
+[[ -z "${HIDOOP_CLASSES}" ]] && HIDOOP_CLASSES=$HIDOOP_HOME/src
+cd $HIDOOP_CLASSES
 echo
 echo '(**********************)'
 echo '(******* HIDOOP *******)'

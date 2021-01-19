@@ -6,7 +6,7 @@ Ce répertoire correspond à l'arborescence de fichiers suivante :
 - le répertoire **config** contient les fichiers d'initialisation pouvant être utiles lors du lancement de la plateforme
 - le répertoire **data** accueille les fichiers de données de l'application
 - le répertoire **doc** accueille les rapports attendus
-- le répertoire **src** contient les codes sources. Ce répertoire contient lui-même les sous-répertoires suivants
+- le répertoire **src** contient les codes sources. Ce répertoire contient lui-même les sous-répertoires suivants :
   - application, pour le code des applications
   - config, pour les utilitaires de configuration
   - formats, pour la spécification et la réalisation des formats
@@ -20,24 +20,25 @@ La variable système **HIDOOP_HOME** est nécessaire au fonctionnement de Hidoop
 
 La configuration se fait via un fichier *conf.xml* placé dans le répertoire **HIDOOP_HOME/config/**.
 Un fichier d'exemple est donné ci-dessous :
-
-    <?xml version="1.0" encoding="UTF-8"?>
-    <config metadata="meta">
-        <default-chunk-size value="64" unit="bytes" />
-        <servers>
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config metadata="meta">
+  <default-chunk-size value="64" unit="bytes" />
+    <servers>
         <node ip="127.0.0.1"/>
         <node ip="chewie"/>
         <node ip="yoda"/>
-        </servers>
-    </config>
+    </servers>
+</config>
+```
 
-*Note : les unités de tailles supportées sont bytes, kB, MB, GB.*
+*Note : les unités de tailles supportées sont bytes, kB, MB, GB. Une unité inconnue a le même effet que bytes.*
 
 Ce fichier est utilisé par la classe ***config.AppData***. 
 
 ##### Script de lancement 
 Le script *hidoop.sh* permet de lancer / arrêter automatiquement les serveurs indiqués dans le fichier de configuration *conf.xml* via ssh (machines N7).
-Le répertoire où les commandes sont exécutées est **HIDOOP_HOME/src** par défaut, mais il est possible de définir une variable système **HIDOOP_CLASSES** qui indique la localisation des classes java de l'application.
+Le répertoire où les commandes sont exécutées est ***HIDOOP_HOME**/src* par défaut, mais il est possible de définir une variable système **HIDOOP_CLASSES** qui indique la localisation des classes java de l'application.
 
 On peut lancer n'importe quelle commande, plus les suivantes :  
  - ***start*** pour lancer les serveurs 
@@ -46,3 +47,15 @@ On peut lancer n'importe quelle commande, plus les suivantes :
  - ***mmr*** raccourci pour java application.MyMapReduce, suivi des mêmes arguments 
 
 
+##### Compilation
+
+```bash
+cd $HIDOOP_HOME/src
+javac application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java hdfs/HdfsClient.java hdfs/HdfsServer.java
+```
+ 
+Pour spécifier un répertoire particulier pour les classes :
+```bash
+cd $HIDOOP_HOME/src
+javac -d $HIDOOP_CLASSES  application/MyMapReduce.java application/Count.java ordo/WorkerImpl.java hdfs/HdfsClient.java hdfs/HdfsServer.java
+```

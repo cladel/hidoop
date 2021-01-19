@@ -127,7 +127,7 @@ public class HdfsClient {
             } else if (resCode != Constants.FILE_EMPTY) { // Just ignore an empty chunk
                 allOk = false;
                 // Print error code
-                System.err.println(res.getId()+ " error : "+res.getRes());
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
             }
 
         }
@@ -208,7 +208,7 @@ public class HdfsClient {
             else {
                 allOk = false;
                 if (tmp != null) tmp.delete();
-                System.err.println(res.getId()+ " error : "+resCode);
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+resCode);
             }
 
         }
@@ -252,7 +252,7 @@ public class HdfsClient {
             if (!ok) {
                 allOk = false;
                 // Print error code
-                System.err.println(res.getId()+ " error : "+res.getRes());
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
             }
 
         }
