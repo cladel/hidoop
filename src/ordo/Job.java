@@ -131,10 +131,6 @@ class Employe implements Runnable{
             worker.runMap(mr,frMap,fwMap,cb);
         } catch (NotBoundException | MalformedURLException | RemoteException exception) {
             exception.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            e.printStackTrace();
         }
     }
 }

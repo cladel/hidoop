@@ -41,7 +41,7 @@ public class HdfsClient {
      */
     private static String getPathForFile(String file){
         if (file.trim().charAt(0)=='/') return file; // Chemin absolu
-        else return Project.getDataPath(); // Chemin relatif à HIDOOP_HOME
+        else return Project.getDataPath()+file; // Chemin relatif à HIDOOP_HOME
     }
 
 
