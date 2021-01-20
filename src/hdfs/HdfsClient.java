@@ -31,17 +31,17 @@ public class HdfsClient {
                 "--rep is currently not supported and is always 1.");
     }
 
+
     /**
      * Get path for file.
      * If the given file name starts with '/' it is considered as an absolute path
      * and will be used as such. Otherwise, the relative path in $HIDOOP_HOME will
      * be used.
-     * @param file If empty, returns $HIDOOP_HOME/data.
      * @return path for this file
      */
     private static String getPathForFile(String file){
-        if (file.trim().charAt(0)=='/') return file; // Chemin absolu
-        else return Project.getDataPath()+file; // Chemin relatif à HIDOOP_HOME
+        if (file.trim().charAt(0)=='/') return file; // Absolute path
+        else return Project.getDataPath()+file; // Path relative to data folder
     }
 
 
@@ -142,7 +142,7 @@ public class HdfsClient {
             } else if (resCode != Constants.FILE_EMPTY) { // Just ignore an empty chunk
                 allOk = false;
                 // Print error code
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
             }
 
         }
@@ -176,7 +176,7 @@ public class HdfsClient {
 
         File local = new File(getPathForFile(localFSDestFname));
         localFSDestFname = local.getName();
-        if (local.exists()) throw new FileAlreadyExistsException(localFSDestFname);
+        if (local.exists()) local.delete();
         local.createNewFile();
 
         System.out.println("Reading file...");
@@ -218,20 +218,20 @@ public class HdfsClient {
                     }
 
                     in.close();
-                    tmp.delete();
+                    tmp.deleteOnExit();
                 }
             }
             else {
                 allOk = false;
-                if (tmp != null) tmp.delete();
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+resCode);
+                if (tmp != null) tmp.deleteOnExit();
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+resCode);
             }
 
         }
         pool.shutdown();
         out.close();
         if (allOk) System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
-        else local.delete();
+        else local.deleteOnExit();
 
     }
 
@@ -268,7 +268,7 @@ public class HdfsClient {
             if (!ok) {
                 allOk = false;
                 // Print error code
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
             }
 
         }
@@ -382,6 +382,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, Map.entry(status, local));
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 return new OperationResult<>(id, serverIp, Map.entry(Constants.IO_ERROR, local));
             }
@@ -536,6 +537,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 // Signal failure
                 return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
@@ -583,6 +585,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
             }
@@ -674,8 +677,9 @@ public class HdfsClient {
                 default: usage();
             }
         } catch (FileNotFoundException | FileAlreadyExistsException ferr){
-            System.err.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
+            System.out.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
         } catch (Exception ex) {
+            System.out.println(ex.getMessage());
             ex.printStackTrace();
         }
     }

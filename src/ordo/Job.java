@@ -8,11 +8,14 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class Job implements JobInterface{
@@ -37,27 +40,37 @@ public class Job implements JobInterface{
         try {
             // Recuperer les metadonnées et les ip des serveurs
             AppData m = AppData.loadConfigAndMeta(false);
-            String [] server = m.getServersIp();
             Metadata data = m.getMetadata();
 
-            CallBackImpl cb = new CallBackImpl(server.length);
             Format.Type ft;
-            FileData fd;
 
             if (fType.equals(Format.Type.LINE)) ft = Format.Type.KV;
             else ft = Format.Type.LINE;
 
-            // Creation d'un FileData pour le fichier des résultats de map, sans spécifier sa taille
-            fd = new FileData(ft);
+            // Fichier dont on veut les chunks
+            FileData fd = data.retrieveFileData(fName);
+            if (fd == null) throw new FileNotFoundException(fName);
+            // Fichier temporaire pour les résultats du map
+            FileData newfd = new FileData(ft);
 
+            // Creation d'un FileData pour le fichier des résultats de map, sans spécifier sa taille
+
+
+            List<Integer> chunkList = fd.getChunksIds();
+
+            CallBackImpl cb = new CallBackImpl(chunkList.size());
+
+            System.out.println("Launching workers...");
             // Calculer et répertorier les résultats des maps
-            for (int i=0 ; i<server.length ; i++ ){
-                Thread t = new Thread(new Employe(server[i], i, mr, this.fType, this.fName, cb));
+            String server;
+            for (int i : chunkList){
+                server = fd.getSourcesForChunk(i).get(0); // tjs rep = 1
+                Thread t = new Thread(new Employe(server, i, mr, this.fType, this.fName, cb));
                 t.start();
-                fd.addChunkHandle(i, server[i]);
+                newfd.addChunkHandle(i, server);
             }
 
-            data.addFileData(fName+"-res", fd);
+            data.addFileData(fName+"-res", newfd);
             HdfsClient.useData(m);
 
             // Attente avant de récupérer les résultats des workers
@@ -67,6 +80,7 @@ public class Job implements JobInterface{
             HdfsClient.HdfsRead(fName+"-res", fName + "-res");
             File tmp = new File(Project.getDataPath()+fName + "-res");
             if (!tmp.exists()) throw new RuntimeException("Erreur de récupération des chunks.");
+            System.out.println("Launching reduce task...");
 
             Format frReduce;
             Format fwReduce;
@@ -84,12 +98,13 @@ public class Job implements JobInterface{
             mr.reduce(frReduce, fwReduce);
             frReduce.close();
             fwReduce.close();
-            System.out.println("Fini Reduce");
+            System.out.println("Reduce done : "+fName+"-tot");
 
             HdfsClient.HdfsDelete(fName + "-res");
             tmp.deleteOnExit();
 
         } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
+            System.out.println(e.getMessage());
             e.printStackTrace();
         }
     }
@@ -121,15 +136,17 @@ class Employe implements Runnable{
             Format fwMap;
             if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
                 // l'output est obligatoirement l'autre
-                frMap = new LineFormat(Project.getDataPath()+FileData.chunkName(numServ, fName, Format.Type.LINE));
-                fwMap = new KVFormat(Project.getDataPath()+FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
+                frMap = new LineFormat(FileData.chunkName(numServ, fName, Format.Type.LINE));
+                fwMap = new KVFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
             } else {
-                frMap = new KVFormat(Project.getDataPath()+FileData.chunkName(numServ, fName, Format.Type.KV));
-                fwMap = new LineFormat(Project.getDataPath()+FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
+                frMap = new KVFormat(FileData.chunkName(numServ, fName, Format.Type.KV));
+                fwMap = new LineFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
             }
+
             Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
         } catch (NotBoundException | MalformedURLException | RemoteException exception) {
+            System.out.println(exception.getMessage());
             exception.printStackTrace();
         }
     }

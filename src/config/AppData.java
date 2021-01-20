@@ -82,7 +82,7 @@ public class AppData {
                 }
             }
 
-            ld.metadata = Metadata.load(new File(Project.getDataPath() + ld.DATAFILE_NAME), createIfNotFound);
+            ld.metadata = Metadata.load(new File(Project.getConfigPath() + ld.DATAFILE_NAME), createIfNotFound);
 
             return ld;
         } else {
@@ -95,7 +95,7 @@ public class AppData {
      * @param data metadata object
      */
     public void saveMetadata(Metadata data) throws IOException {
-        Metadata.save(new File(Project.getDataPath() + DATAFILE_NAME),data);
+        Metadata.save(new File(Project.getConfigPath() + DATAFILE_NAME),data);
     }
 
 
