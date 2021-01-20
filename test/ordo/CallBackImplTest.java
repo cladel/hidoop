@@ -1,12 +1,9 @@
 package ordo;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.rmi.RemoteException;
-
-import static org.junit.Assert.*;
 
 public class CallBackImplTest {
 
@@ -50,7 +47,7 @@ public class CallBackImplTest {
             while (threadReveil2.getState() != Thread.State.TERMINATED){}
             while (threadReveil3.getState() != Thread.State.TERMINATED){}
 
-            Thread.sleep(10L);
+            Thread.sleep(20L);
 
             if (threadAttente.getState() == Thread.State.TERMINATED){
                 assert true;
