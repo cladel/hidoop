@@ -26,10 +26,14 @@ public class Job implements JobInterface{
         this.fType = ft;
     }
 
+    public Format.Type getInputFormat(){return this.fType;}
+
     @Override
     public void setInputFname(String fname) {
         this.fName = fname;
     }
+
+    public String getInputFname(){return this.fName;}
 
     @Override
     public void startJob(MapReduce mr) {
