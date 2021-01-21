@@ -16,4 +16,4 @@
 !src/ordo/
 !doc/
 !test/
-
+!deployN7.sh
