@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.rmi.RemoteException;
+import java.util.concurrent.TimeoutException;
 
 public class CallBackImplTest {
 
@@ -29,7 +30,6 @@ public class CallBackImplTest {
 
     @Test
     public void callbackTestNormal() {
-        try {
             // Lancement du thread d'attente
             System.out.println("Attente en cours...");
             threadAttente.start();
@@ -46,24 +46,19 @@ public class CallBackImplTest {
             while (threadReveil1.getState() != Thread.State.TERMINATED){}
             while (threadReveil2.getState() != Thread.State.TERMINATED){}
             while (threadReveil3.getState() != Thread.State.TERMINATED){}
-
-            Thread.sleep(20L);
+            while (threadAttente.getState() != Thread.State.TERMINATED) {}
 
             if (threadAttente.getState() == Thread.State.TERMINATED){
                 assert true;
             } else {
                 assert false;
             }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
     }
 
+    /** Pour ce test, il doit y avoir une exception du type "TimeoutException: Server not responding..."
+     * Il serv à vérifier qu'un callback ne se bloque pas si il y a un problème (délai à vérifier dans le callback) */
     @Test
     public void callbackTestErreur() {
-        try {
             // Lancement du thread d'attente
             System.out.println("Attente en cours...");
             threadAttente.start();
@@ -78,19 +73,14 @@ public class CallBackImplTest {
             // Attente de la fin des 3 réveils
             while (threadReveil1.getState() != Thread.State.TERMINATED){}
             while (threadReveil2.getState() != Thread.State.TERMINATED){}
+            while (threadAttente.getState() != Thread.State.TERMINATED) {}
 
-            Thread.sleep(10L);
 
-            if (threadAttente.getState() == Thread.State.WAITING){
+            if (threadAttente.getState() == Thread.State.TERMINATED){
                 assert true;
             } else {
                 assert false;
             }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
     }
 }
 
@@ -107,6 +97,8 @@ class attente implements Runnable{
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
             e.printStackTrace();
         }
     }
