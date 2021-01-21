@@ -3,6 +3,7 @@ package ordo;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -21,7 +22,7 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
         this.noeudAttente = this.moniteur.newCondition();
     }
 
-    public void attente() throws InterruptedException {
+    public void attente() throws InterruptedException, TimeoutException {
         moniteur.lock();
         int i = nbNoeuds;
         boolean timeok = true;
@@ -36,7 +37,7 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
         if (i==0) {
             System.out.println("Fin Attente");
         } else {
-            throw new InterruptedException("Connection timed out."); // Utiliser TimeoutException ?
+            throw new TimeoutException("Connection timed out."); // Utiliser TimeoutException ?
         }
         moniteur.unlock();
     }
