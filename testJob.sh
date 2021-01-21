@@ -1,11 +1,11 @@
 #!/bin/bash
 
+HIDOOP_CLASSES=/home/cla/N7/2A/hidoop/out/production/hidoop
+folder=$HIDOOP_HOME/data/
 
-classes=/home/cla/N7/2A/hidoop/out/production/hidoop/
-folder=/home/cla/N7/2A/hidoop/files/
-files=(aragon.txt medium.txt big.txt)
+cd $HIDOOP_CLASSES
+files=("$@")
 
-cd $classes
 
 echo 'Calling Count...'
 for f in ${files[@]}; do 

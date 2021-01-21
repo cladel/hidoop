@@ -25,7 +25,7 @@ public class AppData {
     // Metadata file name
     private final String DATAFILE_NAME;
     // Default chunk size
-    private long defaultChunkSize =  64 * 1024 * 1024; // 64 MB
+    private long defaultChunkSize =  64 * 1000 * 1000; // 64 MB
 
 
     private AppData(String datafile) {
@@ -72,17 +72,17 @@ public class AppData {
                 switch (e.getAttribute("unit").toUpperCase()){
 
                     case "GB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                     case "MB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                     case "KB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                         break;
 
                 }
             }
 
-            ld.metadata = Metadata.load(new File(Project.getDataPath() + ld.DATAFILE_NAME), createIfNotFound);
+            ld.metadata = Metadata.load(new File(Project.getConfigPath() + ld.DATAFILE_NAME), createIfNotFound);
 
             return ld;
         } else {
@@ -95,7 +95,7 @@ public class AppData {
      * @param data metadata object
      */
     public void saveMetadata(Metadata data) throws IOException {
-        Metadata.save(new File(Project.getDataPath() + DATAFILE_NAME),data);
+        Metadata.save(new File(Project.getConfigPath() + DATAFILE_NAME),data);
     }
 
 

@@ -156,8 +156,8 @@ public class HdfsServer {
                             File fichier = new File(Project.getDataPath() + nameFile);
 
                             if (fichier.exists()) {
-                                fichier.delete();
-                                System.out.println(nameFile +" deleted.");
+                                if (fichier.delete()) System.out.println(nameFile +" deleted.");
+                                else  System.err.println("Error deleting "+nameFile);
                                 Constants.putLong(buf, 0);
                                 ouS.write(buf,0,Long.BYTES);
                             } else {
@@ -187,9 +187,13 @@ public class HdfsServer {
     public static void main (String args[]) {
         try {
             // Indiquer le démarrage pour les log
-            System.out.println("Startup : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+            System.out.println("HDFS start : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
             // Indiquer l'arret pour les log
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("Shutdown : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) )));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> System.out.println("HDFS stop : "+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) )));
+            // Verifier que le dossier data existe sinon le créer
+            File data = new File(Project.getDataPath());
+            if(!data.exists() && !data.mkdirs()) throw new FileNotFoundException("HIDOOP_HOME/data not found and could not be created.");
+
             ServerSocket server = new ServerSocket(Constants.PORT);
             while (true) {
                 Socket socket = server.accept();

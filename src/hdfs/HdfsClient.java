@@ -9,8 +9,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Map;
@@ -26,30 +25,56 @@ public class HdfsClient {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
                 "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes> ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
-                "| -l }\n"+
+                "| -l [-d] }\n"+
                 "Default format is ln. \n" +
                 "--rep is currently not supported and is always 1.");
     }
 
 
     /**
+     * Get path for file.
+     * If the given file name starts with '/' it is considered as an absolute path
+     * and will be used as such. Otherwise, the relative path in $HIDOOP_HOME will
+     * be used.
+     * @return path for this file
+     */
+    private static String getPathForFile(String file){
+        if (file.trim().charAt(0)=='/') return file; // Absolute path
+        else return Project.getDataPath()+file; // Path relative to data folder
+    }
+
+
+    /**
      * Print file list
      */
-    public static void HdfsList() {
+    public static void HdfsList(boolean details) {
         DateFormat df = new SimpleDateFormat();
         Metadata data = HdfsClient.data.getMetadata();
         FileData fd;
-        String size;
-
-        System.out.println(data.getFileCount()+ " saved (" + df.format(data.getSaveDate())+") :");
+        String size, chunkSize;
+        System.out.println("-----------------------------------------\n");
+        System.out.println(data.getFileCount()+ " saved (last saving " + df.format(data.getSaveDate())+") : ");
 
         for (String n : data.getFileNames()){
             fd = data.retrieveFileData(n);
-            size = fd.getFileSize() >= 0 ? fd.getFileSize()+" B" : "UNKNOWN SIZE";
-            System.out.println("    - " + n + " (" + size + ")");
+            size = Constants.getHumanReadableSize(fd.getFileSize());
+            chunkSize = Constants.getHumanReadableSize(fd.getChunkSize());
+            System.out.print("\n    - " + n + " (" + size + ")");
 
+            if (details) {
+                System.out.println("      " + fd.getChunkCount() + " * " + chunkSize + " chunks");
+
+                for (int id : fd.getChunksIds()) {
+                    System.out.println("        #" + id + " :");
+                    for (String ip : fd.getSourcesForChunk(id)) {
+                        System.out.println("            - " + ip);
+                    }
+                }
+            } else {
+                System.out.println();
+            }
         }
-        System.out.println("-----------------------------");
+        System.out.println("-----------------------------------------");
     }
 
 
@@ -73,12 +98,18 @@ public class HdfsClient {
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
         if (SERVERS_IP.length == 0) throw new UnsupportedOperationException("No server found.");
 
-        final File local = new File(Project.getDataPath()+localFSSourceFname);
+        final File local = new File(getPathForFile(localFSSourceFname));
+        localFSSourceFname = local.getName();
+
         long size = local.length(); // size in bytes
         int start = 0;
 
         FileData fd = data.retrieveFileData(localFSSourceFname);
         boolean isNew = (fd == null);
+
+        // Use default size
+        if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
+
 
         if (isNew) {
             // Create file
@@ -88,10 +119,6 @@ public class HdfsClient {
             // TODO is append possible?
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
-
-        // Use default size
-        if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
-
 
         // Count chunks
         int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
@@ -127,7 +154,7 @@ public class HdfsClient {
             } else if (resCode != Constants.FILE_EMPTY) { // Just ignore an empty chunk
                 allOk = false;
                 // Print error code
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
             }
 
         }
@@ -159,8 +186,9 @@ public class HdfsClient {
         FileData fd = data.retrieveFileData(hdfsFname);
         if (fd == null) throw new FileNotFoundException(hdfsFname);
 
-        File local = new File(Project.getDataPath()+localFSDestFname);
-        if (local.exists()) throw new FileAlreadyExistsException(localFSDestFname);
+        File local = new File(getPathForFile(localFSDestFname));
+        localFSDestFname = local.getName();
+        if (local.exists()) local.delete();
         local.createNewFile();
 
         System.out.println("Reading file...");
@@ -202,20 +230,20 @@ public class HdfsClient {
                     }
 
                     in.close();
-                    tmp.delete();
+                    tmp.deleteOnExit();
                 }
             }
             else {
                 allOk = false;
-                if (tmp != null) tmp.delete();
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+resCode);
+                if (tmp != null) tmp.deleteOnExit();
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+resCode);
             }
 
         }
         pool.shutdown();
         out.close();
         if (allOk) System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
-        else local.delete();
+        else local.deleteOnExit();
 
     }
 
@@ -252,7 +280,7 @@ public class HdfsClient {
             if (!ok) {
                 allOk = false;
                 // Print error code
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") : error "+res.getRes());
+                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
             }
 
         }
@@ -309,7 +337,7 @@ public class HdfsClient {
         public Read(String name, int id, String serverIp) throws IOException {
             this.command = Commands.HDFS_READ.toString() + " " + name;
             String tmpName = name + ".tmp";
-            this.local = new File(Project.getDataPath()+tmpName);
+            this.local = new File(Project.getDataPath()+(tmpName));
             local.createNewFile();
             this.serverIp = serverIp;
             this.id = id;
@@ -366,6 +394,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, Map.entry(status, local));
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 return new OperationResult<>(id, serverIp, Map.entry(Constants.IO_ERROR, local));
             }
@@ -520,6 +549,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 // Signal failure
                 return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
@@ -567,6 +597,7 @@ public class HdfsClient {
                 return new OperationResult<>(id, serverIp, status);
 
             } catch (Exception e) {
+                System.out.println(serverIp+" : "+e.getMessage());
                 e.printStackTrace();
                 return new OperationResult<>(id, serverIp, Constants.IO_ERROR);
             }
@@ -596,7 +627,15 @@ public class HdfsClient {
                 case "-l":
                     data = AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
-                    HdfsList();
+                    boolean details = false;
+                    if (args.length > 1) {
+                        if (args.length == 2 && args[1].equals("--detail")) details = true;
+                        else {
+                            usage();
+                            return;
+                        }
+                    }
+                    HdfsList(details);
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
@@ -658,8 +697,9 @@ public class HdfsClient {
                 default: usage();
             }
         } catch (FileNotFoundException | FileAlreadyExistsException ferr){
-            System.err.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
+            System.out.println(ferr.getClass().getSimpleName()+" : "+ferr.getMessage());
         } catch (Exception ex) {
+            System.out.println(ex.getMessage());
             ex.printStackTrace();
         }
     }

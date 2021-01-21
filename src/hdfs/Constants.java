@@ -1,5 +1,6 @@
 package hdfs;
 
+import java.text.DecimalFormat;
 import java.util.Arrays;
 
 /**
@@ -63,5 +64,24 @@ public class Constants {
             if (array[i] == chr) return i;
         }
         return -1;
+    }
+
+    /**
+     * Get human readable size (bytes, kB, MB, GB, TB)
+     * @param size in bytes
+     * @return the formatted size
+     */
+    public static String getHumanReadableSize(long size){
+        if (size < 0) return "UNKNOWN SIZE";
+        else if (size < 1000) return  size+" B";
+        String prefixes = "kMGT";
+        int i = 0;
+        float s = size/1000f;
+        while (i < prefixes.length() && s >= 1000f){
+            s /= 1000f;
+            i++;
+        }
+
+        return new DecimalFormat("#.#").format(s)+" "+prefixes.charAt(i)+"B";
     }
 }

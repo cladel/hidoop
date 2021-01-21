@@ -1,5 +1,6 @@
 package ordo;
 
+import config.Project;
 import formats.Format;
 import map.Mapper;
 
@@ -18,6 +19,8 @@ public class WorkerImpl extends UnicastRemoteObject implements Worker {
 
     @Override
     public void runMap(Mapper m, Format reader, Format writer, CallBack cb) throws RemoteException {
+        reader.setFname(Project.getDataPath()+reader.getFname());
+        writer.setFname(Project.getDataPath()+writer.getFname());
         Thread t = new Thread(new RunMap(m, reader, writer, cb));
         t.start();
     }
