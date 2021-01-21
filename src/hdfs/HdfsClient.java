@@ -14,6 +14,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class HdfsClient {
@@ -675,7 +677,16 @@ public class HdfsClient {
                             next += 2;
                         } else if (args[next].startsWith("--chunks-size=")) {
                             String mode = args[next].substring("--chunks-size=".length());
-                            chunksMode = Long.parseLong(mode);
+
+                            Pattern r = Pattern.compile("(?<size>[0-9]+(\\.[0-9]+)?)(?<unit>B|kB|MB|GB|TB)?");
+                            Matcher m = r.matcher(mode);
+                            if(m.matches()) {
+                                String unit = m.group("unit");
+                                if (unit == null) unit = "B";
+                                chunksMode = Constants.getSize(Float.parseFloat(m.group("size")), unit);
+                            } else {
+                                chunksMode = -1;
+                            }
                             next++;
                         } else if (args[next].startsWith("--rep=")){
                             /* pas utile pour cette version

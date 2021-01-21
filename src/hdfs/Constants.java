@@ -84,4 +84,25 @@ public class Constants {
 
         return new DecimalFormat("#.#").format(s)+" "+prefixes.charAt(i)+"B";
     }
+
+    public static long getSize(float size, String unit){
+        long ld = (long) size;
+        switch (unit.toUpperCase()){
+            case "TB":
+                ld *= 1000;
+            case "GB":
+                ld *= 1000;
+            case "MB":
+                ld *= 1000;
+            case "KB":
+                ld *= 1000;
+            case "B":
+            case "BYTES":
+                break;
+            default:
+                ld = -1;
+                break;
+        }
+        return ld;
+    }
 }

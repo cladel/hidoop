@@ -3,6 +3,9 @@ package hdfs;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class HdfsTest {
 
     @Test
@@ -35,5 +38,27 @@ public class HdfsTest {
         Assert.assertEquals("UNKNOWN SIZE", Constants.getHumanReadableSize(s5));
 
     }
+
+
+    @Test
+    public void testGetSize(){
+        float f1 = 12;
+        Assert.assertEquals(12000000L, Constants.getSize(f1, "MB"));
+        Assert.assertEquals(12L, Constants.getSize(f1, "B"));
+    }
+
+
+    @Test
+    public void pattern(){
+
+        Pattern r = Pattern.compile("(?<size>[0-9]+(\\.[0-9]+)?)(?<unit>bytes|B|kB|MB|GB|TB)?");
+        Matcher m = r.matcher("1MB");
+        m.matches();
+        String s = m.group("size");
+        String unit = m.group("unit");
+        Assert.assertEquals(123f, Float.parseFloat(s), 0f);
+        Assert.assertEquals("MB", unit);
+    }
+
 
 }

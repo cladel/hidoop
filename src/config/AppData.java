@@ -1,5 +1,6 @@
 package config;
 
+import hdfs.Constants;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -64,22 +65,13 @@ public class AppData {
 
             nlist = root.getElementsByTagName("default-chunk-size");
 
-            if (nlist.getLength() > 0){
+            if (nlist.getLength() == 0){
                 Element e = (Element) nlist.item(0);
-                ld.defaultChunkSize = Long.parseLong(e.getAttribute("value"));
 
-                // Adjusting value to unit : if unit is 'bytes' or unknown then use bytes
-                switch (e.getAttribute("unit").toUpperCase()){
+                float size = Float.parseFloat(e.getAttribute("value"));
+                long s = Constants.getSize(size, e.getAttribute("unit"));
+                ld.defaultChunkSize = (s < 0) ? (long)size : s;
 
-                    case "GB":
-                        ld.defaultChunkSize *= 1000;
-                    case "MB":
-                        ld.defaultChunkSize *= 1000;
-                    case "KB":
-                        ld.defaultChunkSize *= 1000;
-                        break;
-
-                }
             }
 
             ld.metadata = Metadata.load(new File(Project.getConfigPath() + ld.DATAFILE_NAME), createIfNotFound);
