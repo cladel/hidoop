@@ -18,8 +18,7 @@ import java.util.concurrent.*;
 
 public class HdfsClient {
     private static AppData data;
-    private static final boolean verbose = false; // Useful for DEBUG
-
+  
 
     private static void usage() {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
@@ -145,20 +144,22 @@ public class HdfsClient {
 
         // Check success and add metadata
         boolean allOk = true;
+        int progress = 0;
         for (Future<OperationResult<Long>> b : results) {
             OperationResult<Long> res = b.get();
             long resCode = res.getRes();
             if (resCode == 0){
                 fd.addChunkHandle(res.getId(), res.getIpSource());
-
+                System.out.print("\r# "+(++progress*100/count)+" %"); System.out.flush();
             } else if (resCode != Constants.FILE_EMPTY) { // Just ignore an empty chunk
                 allOk = false;
                 // Print error code
-                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
             }
 
         }
         pool.shutdown();
+        System.out.println();
 
         // Save updated metadata
         if (allOk) {
@@ -188,8 +189,7 @@ public class HdfsClient {
 
         File local = new File(getPathForFile(localFSDestFname));
         localFSDestFname = local.getName();
-        if (local.exists()) local.delete();
-        local.createNewFile();
+        if (!local.exists()) local.createNewFile();
 
         System.out.println("Reading file...");
 
@@ -209,12 +209,13 @@ public class HdfsClient {
         }
 
         // Append all tmp files in order
-        FileOutputStream out = new FileOutputStream(local);
+        FileOutputStream out = new FileOutputStream(local, false);
         FileInputStream in;
         byte[] buf = new byte[Constants.BUFFER_SIZE];
         int read;
         boolean allOk = true;
 
+        int progress = 0;
         for (Future<OperationResult<Map.Entry<Long,File>>> b : results) {
             OperationResult<Map.Entry<Long,File>> res = b.get();
             Map.Entry<Long,File> resObj = res.getRes();
@@ -231,16 +232,18 @@ public class HdfsClient {
 
                     in.close();
                     tmp.deleteOnExit();
+                    System.out.print("\r# "+(++progress*100/fd.getChunkCount())+" %"); System.out.flush();
                 }
             }
             else {
                 allOk = false;
                 if (tmp != null) tmp.deleteOnExit();
-                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+resCode);
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+resCode);
             }
 
         }
         pool.shutdown();
+        System.out.println();
         out.close();
         if (allOk) System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
         else local.deleteOnExit();
@@ -274,17 +277,21 @@ public class HdfsClient {
 
         }
         boolean allOk = true;
+        int progress = 0;
         for (Future<OperationResult<Long>> b : results) {
             OperationResult<Long> res = b.get();
             boolean ok = (res.getRes() == 0);
             if (!ok) {
                 allOk = false;
                 // Print error code
-                System.out.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
+                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
+            } else {
+                System.out.print("\r# "+(++progress*100/fd.getChunkCount())+" %"); System.out.flush();
             }
 
         }
         pool.shutdown();
+        System.out.println();
 
         // Save updated metadata
         if (allOk) {
@@ -490,7 +497,6 @@ public class HdfsClient {
                 os.write(cmd);
 
                 // Wait for server available space confirmation
-                if (verbose) System.out.println(id + " awaiting server response...");
                 is.readNBytes(cmd, 0, Long.BYTES);
                 long res = Constants.getLong(cmd);
                 if (res != 0){
@@ -530,13 +536,13 @@ public class HdfsClient {
 
                 long status = 0;
 
-                if (verbose) System.out.println(id + " awaiting server validation...");
+                // Check size
                 is.readNBytes(cmd, 0,  Long.BYTES);
                 long written = Constants.getLong(cmd);
 
                 if (written != totalWritten){
                     status = Constants.INCONSISTENT_FILE_SIZE;
-                    if (verbose) System.out.println(id+" WR error : "+written+" / "+totalWritten);
+                    System.err.println("WR error : "+written+" / "+totalWritten);
                 }
 
 
@@ -617,6 +623,7 @@ public class HdfsClient {
     public static void main(String[] args) {
 
         try {
+          
             if (args.length < 1) {
                 usage();
                 return;
@@ -636,19 +643,19 @@ public class HdfsClient {
                         }
                     }
                     HdfsList(details);
-                    if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
+                    System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
                     data = AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsRead(args[1], args.length > 2 ? args[2] : null);
-                    if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
+                    System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-d":
                     data = AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsDelete(args[1]);
-                    if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
+                    System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-w":
                     Format.Type fmt = Format.Type.LINE;
@@ -692,7 +699,7 @@ public class HdfsClient {
                     data = AppData.loadConfigAndMeta(true);
                     start = System.currentTimeMillis();
                     HdfsWrite(fmt, args[1], rep, chunksMode);
-                    if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
+                    System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 default: usage();
             }

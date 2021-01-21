@@ -14,7 +14,6 @@ import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -100,7 +99,14 @@ public class Job implements JobInterface{
             fwReduce.close();
             System.out.println("Reduce done : "+fName+"-tot");
 
-            HdfsClient.HdfsDelete(fName + "-res");
+            // Delete à la toute fin
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    HdfsClient.HdfsDelete(fName + "-res");
+                } catch (IOException | InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }));
             tmp.deleteOnExit();
 
         } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {

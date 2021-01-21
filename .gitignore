@@ -15,6 +15,5 @@
 !src/map/
 !src/ordo/
 !doc/
-!test/hdfs/
-!test/ordo/
+!test/
 

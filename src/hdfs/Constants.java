@@ -69,7 +69,7 @@ public class Constants {
     /**
      * Get human readable size (bytes, kB, MB, GB, TB)
      * @param size in bytes
-     * @return the formatted size
+     * @return the formatted size, or "UNKNOWN SIZE" if argument is negative
      */
     public static String getHumanReadableSize(long size){
         if (size < 0) return "UNKNOWN SIZE";
