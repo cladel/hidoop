@@ -16,6 +16,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 public class Job implements JobInterface{
     Format.Type fType;
@@ -115,7 +116,7 @@ public class Job implements JobInterface{
             }));
             tmp.deleteOnExit();
 
-        } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
+        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
         }
