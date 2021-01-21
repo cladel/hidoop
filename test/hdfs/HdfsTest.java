@@ -31,6 +31,9 @@ public class HdfsTest {
         long s4 = 150043200000L;
         Assert.assertEquals("150 GB", Constants.getHumanReadableSize(s4));
 
+        long s5 = -5;
+        Assert.assertEquals("UNKNOWN SIZE", Constants.getHumanReadableSize(s5));
+
     }
 
 }

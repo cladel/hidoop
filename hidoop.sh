@@ -3,6 +3,7 @@
 #Verifier parametres
 if [ "$#" -ne 1 ]; then
     echo "Use : ./hidoop.sh <sshuser>"
+    exit 1
 fi
 
 # Verifier que HIDOOP_HOME est défini

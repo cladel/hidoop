@@ -57,7 +57,7 @@ class RunMap implements Runnable {
         map.map(reader, writer);
         reader.close();
         writer.close();
-        System.out.println("Fini Map");
+        System.out.println("Fini Map :"+writer.getFname().substring(Project.getDataPath().length()));
         try {
             cb.reveiller();
         } catch (RemoteException e) {

@@ -1,6 +1,5 @@
 package ordo;
 
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.TimeUnit;
@@ -24,13 +23,20 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
     public void attente() throws InterruptedException {
         moniteur.lock();
         int i = nbNoeuds;
-        while (i > 0){
+        boolean timeok = true;
+        System.out.print("\r"+i + " signaux en attente    ");
+        while (i > 0 && timeok){
             noeudAttente.signal();
-            jobAttente.await();
+            timeok = jobAttente.await(30, TimeUnit.SECONDS); // Temps dépend d'une durée estimée
             i--;
-            System.out.println(i + " Signaux en attente");
+            System.out.print("\r"+i + " signaux en attente    ");
         }
-        System.out.println("Fin Attente");
+        System.out.println();
+        if (i==0) {
+            System.out.println("Fin Attente");
+        } else {
+            throw new InterruptedException("Connection timed out."); // Utiliser TimeoutException ?
+        }
         moniteur.unlock();
     }
 

@@ -55,10 +55,8 @@ public class Job implements JobInterface{
             // Fichier dont on veut les chunks
             FileData fd = data.retrieveFileData(fName);
             if (fd == null) throw new FileNotFoundException(fName);
-            // Fichier temporaire pour les résultats du map
+            // Creation d'un FileData pour le fichier temporaire des résultats de map, sans spécifier sa taille
             FileData newfd = new FileData(ft);
-
-            // Creation d'un FileData pour le fichier des résultats de map, sans spécifier sa taille
 
 
             List<Integer> chunkList = fd.getChunksIds();
@@ -84,7 +82,7 @@ public class Job implements JobInterface{
             // Récupération
             HdfsClient.HdfsRead(fName+"-res", fName + "-res");
             File tmp = new File(Project.getDataPath()+fName + "-res");
-            if (!tmp.exists()) throw new RuntimeException("Erreur de récupération des chunks.");
+            if (!tmp.exists()) throw new IOException("Erreur de récupération des chunks.");
             System.out.println("Launching reduce task...");
 
             Format frReduce;
@@ -118,6 +116,7 @@ public class Job implements JobInterface{
         } catch (InterruptedException | IOException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
+            System.exit(1);
         }
     }
 }
