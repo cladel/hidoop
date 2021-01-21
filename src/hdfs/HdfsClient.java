@@ -9,8 +9,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class HdfsClient {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
                 "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes> ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
-                "| -l }\n"+
+                "| -l [-d] }\n"+
                 "Default format is ln. \n" +
                 "--rep is currently not supported and is always 1.");
     }
@@ -48,21 +47,34 @@ public class HdfsClient {
     /**
      * Print file list
      */
-    public static void HdfsList() {
+    public static void HdfsList(boolean details) {
         DateFormat df = new SimpleDateFormat();
         Metadata data = HdfsClient.data.getMetadata();
         FileData fd;
-        String size;
-
-        System.out.println(data.getFileCount()+ " saved (" + df.format(data.getSaveDate())+") :");
+        String size, chunkSize;
+        System.out.println("-----------------------------------------\n");
+        System.out.println(data.getFileCount()+ " saved (last saving " + df.format(data.getSaveDate())+") : ");
 
         for (String n : data.getFileNames()){
             fd = data.retrieveFileData(n);
-            size = fd.getFileSize() >= 0 ? fd.getFileSize()+" B" : "UNKNOWN SIZE";
-            System.out.println("    - " + n + " (" + size + ")");
+            size = Constants.getHumanReadableSize(fd.getFileSize());
+            chunkSize = Constants.getHumanReadableSize(fd.getChunkSize());
+            System.out.print("\n    - " + n + " (" + size + ")");
 
+            if (details) {
+                System.out.println("      " + fd.getChunkCount() + " * " + chunkSize + " chunks");
+
+                for (int id : fd.getChunksIds()) {
+                    System.out.println("        #" + id + " :");
+                    for (String ip : fd.getSourcesForChunk(id)) {
+                        System.out.println("            - " + ip);
+                    }
+                }
+            } else {
+                System.out.println();
+            }
         }
-        System.out.println("-----------------------------");
+        System.out.println("-----------------------------------------");
     }
 
 
@@ -95,6 +107,10 @@ public class HdfsClient {
         FileData fd = data.retrieveFileData(localFSSourceFname);
         boolean isNew = (fd == null);
 
+        // Use default size
+        if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
+
+
         if (isNew) {
             // Create file
             fd = new FileData(fmt, size, chunkSize);
@@ -103,10 +119,6 @@ public class HdfsClient {
             // TODO is append possible?
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
-
-        // Use default size
-        if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
-
 
         // Count chunks
         int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
@@ -615,7 +627,15 @@ public class HdfsClient {
                 case "-l":
                     data = AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
-                    HdfsList();
+                    boolean details = false;
+                    if (args.length > 1) {
+                        if (args.length == 2 && args[1].equals("--detail")) details = true;
+                        else {
+                            usage();
+                            return;
+                        }
+                    }
+                    HdfsList(details);
                     if (verbose) System.out.println("Durée d'exécution (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":

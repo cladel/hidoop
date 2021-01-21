@@ -25,7 +25,7 @@ public class AppData {
     // Metadata file name
     private final String DATAFILE_NAME;
     // Default chunk size
-    private long defaultChunkSize =  64 * 1024 * 1024; // 64 MB
+    private long defaultChunkSize =  64 * 1000 * 1000; // 64 MB
 
 
     private AppData(String datafile) {
@@ -72,11 +72,11 @@ public class AppData {
                 switch (e.getAttribute("unit").toUpperCase()){
 
                     case "GB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                     case "MB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                     case "KB":
-                        ld.defaultChunkSize *= 1024;
+                        ld.defaultChunkSize *= 1000;
                         break;
 
                 }

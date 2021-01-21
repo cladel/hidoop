@@ -4,6 +4,8 @@
 
 # Except for :
 !.gitignore
+!testJob.sh
+!testHdfs.sh
 !README.md
 !hidoop.sh
 !src/
@@ -13,5 +15,6 @@
 !src/map/
 !src/ordo/
 !doc/
+!test/hdfs/
 !test/ordo/
 
