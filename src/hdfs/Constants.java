@@ -85,6 +85,12 @@ public class Constants {
         return new DecimalFormat("#.#").format(s)+" "+prefixes.charAt(i)+"B";
     }
 
+    /**
+     * Get long size from floating point value and unit
+     * @param size value
+     * @param unit unit bytes, B, kB, MB, GB, TB (case insensitive)
+     * @return size as long
+     */
     public static long getSize(float size, String unit){
         long ld = (long) size;
         switch (unit.toUpperCase()){

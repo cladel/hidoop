@@ -48,17 +48,5 @@ public class HdfsTest {
     }
 
 
-    @Test
-    public void pattern(){
-
-        Pattern r = Pattern.compile("(?<size>[0-9]+(\\.[0-9]+)?)(?<unit>bytes|B|kB|MB|GB|TB)?");
-        Matcher m = r.matcher("1MB");
-        m.matches();
-        String s = m.group("size");
-        String unit = m.group("unit");
-        Assert.assertEquals(123f, Float.parseFloat(s), 0f);
-        Assert.assertEquals("MB", unit);
-    }
-
 
 }
