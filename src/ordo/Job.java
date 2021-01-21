@@ -33,6 +33,12 @@ public class Job implements JobInterface{
         this.fName = fname;
     }
 
+    public Format.Type getInputFormat(){return this.fType;}
+
+
+    public String getInputFname(){return this.fName;}
+
+
     @Override
     public void startJob(MapReduce mr) {
 
