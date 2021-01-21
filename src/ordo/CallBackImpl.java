@@ -14,7 +14,7 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
     private final Condition jobAttente;
     private final int nbNoeuds;
     private final Condition noeudAttente;
-    private final static long tempAttente = 10; // temps en secondes, correspond au temps d'attente de fin d'un worker avant de déclarer qu'il y a un problème
+    private final static long tempAttente = 30; // temps en secondes, correspond au temps d'attente de fin d'un worker avant de déclarer qu'il y a un problème
 
     public CallBackImpl(int nbNoeuds) throws RemoteException {
         this.nbNoeuds = nbNoeuds;
