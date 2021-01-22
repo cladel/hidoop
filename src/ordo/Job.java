@@ -69,8 +69,16 @@ public class Job implements JobInterface{
             String server;
             for (int i : chunkList){
                 server = fd.getSourcesForChunk(i).get(0); // tjs rep = 1
-                Thread t = new Thread(new Employe(server, i, mr, this.fType, this.fName, cb));
-                t.start();
+
+                Format frMap = new LineFormat(FileData.chunkName(i, fName, this.fType));
+                Format fwMap = new KVFormat(FileData.chunkName(i, fName+"-res", this.fType.equals(Format.Type.LINE) ? Format.Type.KV : Format.Type.LINE));
+
+                Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
+                worker.runMap(mr,frMap,fwMap,cb);
+
+
+                //Thread t = new Thread(new Employe(server, i, mr, this.fType, this.fName, cb));
+                //t.start();
                 newfd.addChunkHandle(i, server);
             }
 
@@ -114,7 +122,7 @@ public class Job implements JobInterface{
             }));
             tmp.deleteOnExit();
 
-        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
+        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException | NotBoundException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
@@ -122,6 +130,7 @@ public class Job implements JobInterface{
     }
 }
 
+/**
 class Employe implements Runnable{
     private final CallBackImpl cb;
     private final int numServ;
@@ -163,3 +172,4 @@ class Employe implements Runnable{
         }
     }
 }
+*/
