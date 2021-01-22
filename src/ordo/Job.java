@@ -70,8 +70,8 @@ public class Job implements JobInterface{
             for (int i : chunkList){
                 server = fd.getSourcesForChunk(i).get(0); // tjs rep = 1
 
-                Format frMap = new LineFormat(FileData.chunkName(i, fName, this.fType));
-                Format fwMap = new KVFormat(FileData.chunkName(i, fName+"-res", this.fType.equals(Format.Type.LINE) ? Format.Type.KV : Format.Type.LINE));
+                Format frMap = fType.equals(Format.Type.LINE) ? new LineFormat(FileData.chunkName(i, fName, Format.Type.LINE)) : new KVFormat(FileData.chunkName(i, fName, Format.Type.KV));
+                Format fwMap = fType.equals(Format.Type.LINE) ? new KVFormat(FileData.chunkName(i, fName+"-res", Format.Type.KV)) : new KVFormat(FileData.chunkName(i, fName+"-res", Format.Type.LINE));
 
                 Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
                 worker.runMap(mr,frMap,fwMap,cb);
