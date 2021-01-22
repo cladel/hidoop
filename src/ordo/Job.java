@@ -119,7 +119,8 @@ public class Job implements JobInterface{
             }));
             tmp.deleteOnExit();
 
-        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
+        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException |
+                SAXException | ClassNotFoundException | ExecutionException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
@@ -149,17 +150,10 @@ class Employe implements Runnable {
     @Override
     public void run() {
         try {
+
             // Création des formats d'input (fr) et d'output (fw)
-            Format frMap;
-            Format fwMap;
-            if (fType.equals(Format.Type.LINE)){ // détection du type de format d'input,
-                // l'output est obligatoirement l'autre
-                frMap = new LineFormat(FileData.chunkName(numServ, fName, Format.Type.LINE));
-                fwMap = new KVFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.KV));
-            } else {
-                frMap = new KVFormat(FileData.chunkName(numServ, fName, Format.Type.KV));
-                fwMap = new LineFormat(FileData.chunkName(numServ, fName+"-res", Format.Type.LINE));
-            }
+            Format frMap = new LineFormat(FileData.chunkName(numServ, fName, fType));
+            Format fwMap = new KVFormat(FileData.chunkName(numServ, fName+"-res", fType == Format.Type.LINE ? Format.Type.KV : Format.Type.LINE));
 
             Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
             worker.runMap(mr,frMap,fwMap,cb);
