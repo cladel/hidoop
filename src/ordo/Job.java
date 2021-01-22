@@ -16,6 +16,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 public class Job implements JobInterface{
@@ -66,19 +68,14 @@ public class Job implements JobInterface{
 
             System.out.println("Launching workers...");
             // Calculer et répertorier les résultats des maps
+
+
+            ExecutorService pool = Executors.newCachedThreadPool();
             String server;
             for (int i : chunkList){
                 server = fd.getSourcesForChunk(i).get(0); // tjs rep = 1
 
-                Format frMap = new LineFormat(FileData.chunkName(i, fName, this.fType));
-                Format fwMap = new KVFormat(FileData.chunkName(i, fName+"-res", this.fType.equals(Format.Type.LINE) ? Format.Type.KV : Format.Type.LINE));
-
-                Worker worker = (Worker) Naming.lookup("//"+server+":" + WorkerImpl.PORT + "/worker");
-                worker.runMap(mr,frMap,fwMap,cb);
-
-
-                //Thread t = new Thread(new Employe(server, i, mr, this.fType, this.fName, cb));
-                //t.start();
+                pool.submit(new Employe(server, i, mr, this.fType, this.fName, cb));
                 newfd.addChunkHandle(i, server);
             }
 
@@ -122,7 +119,7 @@ public class Job implements JobInterface{
             }));
             tmp.deleteOnExit();
 
-        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException | NotBoundException e) {
+        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException | SAXException | ClassNotFoundException | ExecutionException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);
@@ -130,8 +127,8 @@ public class Job implements JobInterface{
     }
 }
 
-/**
-class Employe implements Runnable{
+
+class Employe implements Runnable {
     private final CallBackImpl cb;
     private final int numServ;
     private final MapReduce mr;
@@ -172,4 +169,3 @@ class Employe implements Runnable{
         }
     }
 }
-*/

@@ -8,7 +8,7 @@ import java.util.Arrays;
  */
 public class Constants {
     public static final int PORT = 3000;
-    public static final int BUFFER_SIZE = 1024;
+    public static final int BUFFER_SIZE = 8 * 1024 * 1024; // 8 MiB
     public static final int CMD_BUFFER_SIZE = 96; // 4 + file_name + 8 bytes
     public final static String SEPARATOR = " ";
     public final static byte END_CHUNK_DELIMITER = 0x03; // End of text

@@ -3,8 +3,6 @@ package hdfs;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class HdfsTest {
 
@@ -45,6 +43,8 @@ public class HdfsTest {
         float f1 = 12;
         Assert.assertEquals(12000000L, Constants.getSize(f1, "MB"));
         Assert.assertEquals(12L, Constants.getSize(f1, "B"));
+        Assert.assertEquals(12000L, Constants.getSize(f1, "kB"));
+        Assert.assertTrue(Constants.getSize(-f1, "B") < 0);
     }
 
 
