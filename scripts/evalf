@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#Verifier parametres
+if [ "$#" -lt 2 ]; then
+    echo "Use : $0 <filename> <maxchunks> [mmr_ip]"
+    exit 1
+fi
+
+taille=$(wc -c data/"$1" | awk '{print $1}')
+nodes=(${NODES})
+nbmachines=$(echo ${nodes[@]} | wc -w)
+
+echo "### EVAL: $1 ${taille}B on $nbmachines servers"
+
+start
+for i in  $( seq 1 $2 ) 
+do
+
+   chunksize=$(($taille / $nbmachines / $i + 1 ))
+   echo "-- EVAL: $i x ${chunksize}B per server --"
+   hdfs -w $1 --chunks-size=$chunksize
+   
+   for k in {1..10}
+   do 
+      echo "-- ($i) Test n°$k --"
+      mmr $([[ -z  $3 ]] || echo "-ip $3") $1
+   done
+
+   hdfs -d $1
+
+done
+stop
+
+
+

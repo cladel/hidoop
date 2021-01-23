@@ -60,7 +60,7 @@ public class HdfsServer {
                             // Confirmation allocation possible sur le serveur
                             File dir = new File(Project.getDataPath());
                             long usable = dir.getUsableSpace();
-                            if (usable <= 2 * minFileSize){
+                            if (usable <= Constants.CHUNK_LIMIT_FACTOR * minFileSize){
                                 System.err.println("Erreur espace insuffisant : "+ usable + " bytes.");
                                 Constants.putLong(buf, Constants.FILE_TOO_LARGE);
                                 ouS.write(buf,0,Long.BYTES);
@@ -84,9 +84,9 @@ public class HdfsServer {
                             nbOctetsInLus = inS.read(buffer);
                             while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER,0,nbOctetsInLus)) == -1){
 
-                                if (nbytesTotal > minFileSize * 2){
+                                if (nbytesTotal > minFileSize * Constants.CHUNK_LIMIT_FACTOR){
                                     // Refuser chunk trop gros (sécurité)
-                                    Constants.putLong(buf, Constants.FILE_TOO_LARGE);
+                                    Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
                                     ouS.write(buf,0,Long.BYTES);
                                     socket.close();
                                     return;
@@ -95,10 +95,16 @@ public class HdfsServer {
                                 nbOctetsInLus = inS.read(buffer);
                             }
 
-
-                            fileStream.write(buffer, 0, end);
                             // Mise à jour de la taille écrite
                             nbytesTotal -= (nbOctetsInLus - end);
+                            if (nbytesTotal > minFileSize * Constants.CHUNK_LIMIT_FACTOR) {
+                                // Refuser chunk trop gros (sécurité)
+                                Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
+                                ouS.write(buf,0,Long.BYTES);
+                                socket.close();
+                                return;
+                            } else fileStream.write(buffer, 0, end);
+
 
 
                             if (nbytesTotal > 0) {

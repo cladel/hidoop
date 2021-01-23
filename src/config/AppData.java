@@ -39,7 +39,8 @@ public class AppData {
      * @param createIfNotFound create metadata file if not found
      * @return Metadata information (since we always need them)
      */
-    public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException, ParserConfigurationException, ClassNotFoundException {
+    public static AppData loadConfigAndMeta(boolean createIfNotFound) throws IOException, SAXException,
+            ParserConfigurationException, ClassNotFoundException {
 
         if (Project.PATH == null) {
             throw new IllegalStateException("HIDOOP_HOME is undefined.");

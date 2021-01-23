@@ -13,7 +13,7 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
     private final Condition jobAttente;
     private final int nbNoeuds;
     private final Condition noeudAttente;
-    private final static long tempsAttente = 30;
+    private final static long ATTENTE = 120;
 
     public CallBackImpl(int nbNoeuds) throws RemoteException {
         this.nbNoeuds = nbNoeuds;
@@ -26,12 +26,12 @@ public class CallBackImpl extends UnicastRemoteObject implements CallBack {
         moniteur.lock();
         int i = nbNoeuds;
         boolean timeok = true;
-        System.out.print("\r"+i + " signaux en attente    ");
+        System.out.print("\r"+i + " signaux en attente...");
         while (i > 0 && timeok){
             noeudAttente.signal();
-            timeok = jobAttente.await(tempsAttente, TimeUnit.SECONDS);
+            timeok = jobAttente.await(ATTENTE, TimeUnit.SECONDS);
             i--;
-            System.out.print("\r"+i + " signaux en attente    ");
+            System.out.print("\r"+i + " signaux en attente...");
         }
         System.out.println();
         if (i==0) {

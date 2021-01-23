@@ -2,7 +2,7 @@
 
 #Verifier parametres
 if [ "$#" -ne 1 ]; then
-    echo "Use : ./hidoop.sh <sshuser>"
+    echo "Use : $0 <sshuser>"
     exit 1
 fi
 
@@ -28,6 +28,12 @@ temp=$(cat <<EOF
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
 nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
 
+# Constantes utiles
+export SSHUSER=$1
+export magenta="\001\033[1;95m\002"
+export delimiter="\001\033[0;00m\002"
+export NODES=\$(echo "\${nodes[*]}")
+
 
 # Démarrage des serveurs
 function start()
@@ -45,6 +51,7 @@ do
   javacmd=\$(echo "<hdfs.HdfsServer><ordo.WorkerImpl>" | sed "s|<\([^<>]*\)>|nohup java -cp \\\$HIDOOP_CLASSES \1 >> \\\$HIDOOP_HOME/\$s.log 2>\&1 \& |g ")
   ssh $@@\$s " [[ -z  \\\$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\\\$HIDOOP_HOME/src ; \${javacmd}"
 
+  sleep 0.5
 done
 
 }
@@ -58,18 +65,19 @@ function stop()
    do
 	    echo " - \$s"
 	    ssh $@@\$s "pkill -f 'java .*(ordo.*|hdfs.*)' "
+            sleep 0.5
    done
 }
 
 
 function hdfs()
 {
+   #java hdfs.HdfsClient \$@ 2> >("sed -e \"s/^/\$(date -Iseconds) /\" ">>$HIDOOP_HOME/log)
    java -cp $HIDOOP_CLASSES hdfs.HdfsClient \$@ 2>>$HIDOOP_HOME/log
 }
 
 function mmr()
 {
-   # Specifier l'ip à utiliser pour java.rmi.server.hostname
    if [[ \$1 = "-ip" ]] ; then
       iprmi=-Djava.rmi.server.hostname=\$2
       cmdargs=\${@: 3}
@@ -80,10 +88,35 @@ function mmr()
    java \$iprmi -cp $HIDOOP_CLASSES application.MyMapReduce \$cmdargs 2>>$HIDOOP_HOME/log
 }
 
+function printconf()
+{
+   cat \$HIDOOP_HOME/config/conf.xml
+}
 
-cd "$HIDOOP_CLASSES" || exit
+function deploy()
+{
+   source \$HIDOOP_HOME/scripts/hidoop-deploy
+}
 
-PS1="hidoop> "
+export -f start
+export -f stop
+export -f hdfs
+export -f mmr
+export -f printconf
+
+function monitoring()
+{
+   source \$HIDOOP_HOME/scripts/hidoop-monitoring \$1
+}
+
+
+
+
+
+cd "$HIDOOP_HOME" || exit
+
+PS1="\${magenta}hidoop>\${delimiter} "
+
 
 EOF
 )

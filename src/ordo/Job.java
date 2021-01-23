@@ -2,7 +2,8 @@ package ordo;
 
 import config.*;
 import formats.*;
-import hdfs.HdfsClient;
+import hdfs.Deleter;
+import hdfs.Reader;
 import map.MapReduce;
 import org.xml.sax.SAXException;
 
@@ -15,7 +16,6 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
@@ -59,7 +59,7 @@ public class Job implements JobInterface{
             FileData fd = data.retrieveFileData(fName);
             if (fd == null) throw new FileNotFoundException(fName);
             // Creation d'un FileData pour le fichier temporaire des résultats de map, sans spécifier sa taille
-            FileData newfd = new FileData(ft);
+            final FileData newfd = new FileData(ft);
 
 
             List<Integer> chunkList = fd.getChunksIds();
@@ -67,11 +67,11 @@ public class Job implements JobInterface{
             CallBackImpl cb = new CallBackImpl(chunkList.size());
 
             System.out.println("Launching workers...");
+
             // Calculer et répertorier les résultats des maps
 
-
-            ExecutorService pool = Executors.newCachedThreadPool();
             String server;
+            ExecutorService pool = Executors.newCachedThreadPool();
             for (int i : chunkList){
                 server = fd.getSourcesForChunk(i).get(0); // tjs rep = 1
 
@@ -79,15 +79,18 @@ public class Job implements JobInterface{
                 newfd.addChunkHandle(i, server);
             }
 
-            data.addFileData(fName+"-res", newfd);
-            HdfsClient.useData(m);
+        //    data.addFileData(fName+"-res", newfd);
+        //    HdfsClient.useData(m);
 
             // Attente avant de récupérer les résultats des workers
             cb.attente();
+            pool.shutdown();
 
             // Récupération
-            HdfsClient.HdfsRead(fName+"-res", fName + "-res");
+         //   HdfsClient.HdfsRead(fName+"-res", fName + "-res");
             File tmp = new File(Project.getDataPath()+fName + "-res");
+            Reader reader = new Reader(newfd, fName+"-res", tmp);
+            if (!reader.exec()) throw new RuntimeException();
             if (!tmp.exists()) throw new IOException("Erreur de récupération des chunks.");
             System.out.println("Launching reduce task...");
 
@@ -111,16 +114,15 @@ public class Job implements JobInterface{
 
             // Delete à la toute fin
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    HdfsClient.HdfsDelete(fName + "-res");
-                } catch (IOException | InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
+
+                Deleter del = new Deleter(newfd, fName+"-res");
+                del.exec();
+
             }));
             tmp.deleteOnExit();
 
         } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException |
-                SAXException | ClassNotFoundException | ExecutionException e) {
+                SAXException | ClassNotFoundException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+
+# Shell pour l'application
+temp=$(cat <<EOF
+
+rmihost=$1
+function cmpref()
+{
+   java -cp $HIDOOP_CLASSES application.Count $HIDOOP_HOME/data/\$1
+   cmp <(sort $HIDOOP_HOME/data/count-res) <(sort $HIDOOP_HOME/data/\$1-tot)
+}
+
+
+function evalf()
+{
+   
+   source $HIDOOP_HOME/scripts/evalf \$@ $1 | sed -E -e '/.*(time|EVAL:).*/!b' -e "w eval_results_\$1" -e d
+
+}
+
+PS1="${magenta}hidoop-monitoring>${delimiter} "
+
+EOF
+)
+
+bash --init-file <(echo "$temp")

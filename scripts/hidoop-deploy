@@ -1,0 +1,96 @@
+#!/bin/bash
+
+
+
+# Shell pour l'application
+temp=$(cat <<EOF
+
+
+function tonode()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "Deploy one server : \$0 <machine> [destfolder]"
+    return
+   fi
+
+   local_home=\$(ssh $SSHUSER@\$1 "echo \\\$HIDOOP_HOME")
+   if [[ -z \$local_home ]]; then
+       echo 'Please set environment variable HIDOOP_HOME on this server before proceeding.'
+       return
+   fi
+   dest_folder=\$2
+   [[ -z \$dest_folder ]] && dest_folder=\$local_home
+   echo "Sending files on $SSHUSER@\$1:\${dest_folder}..."
+   scp -r src $SSHUSER@\$1:\$dest_folder
+   ssh $SSHUSER@\$1 " [[ -z  \\\$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\\\$HIDOOP_HOME/src ; cd \$dest_folder/src && javac -d \\\$HIDOOP_CLASSES ordo/WorkerImpl.java hdfs/HdfsServer.java application/MyMapReduce.java"
+
+
+}
+
+
+function mkhome()
+{
+  for s in \$NODES
+   do
+	    echo " - \$s"
+	    ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME" ] || mkdir -p \\\$HIDOOP_HOME && chmod 700 \\\$HIDOOP_HOME"
+   done
+
+}
+
+
+function rmhome()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "Remove HIDOOP_HOME from a server : \$0 <machine1> [<machine2> ...]"
+    return
+   fi
+
+  for s in \$@
+   do
+      echo " - \$s"
+      ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME" ] && rm -r \\\$HIDOOP_HOME"
+  done
+}
+
+
+function rmnodedata()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "Remove data from a server : \$0 <machine1> [<machine2> ...]"
+    return
+   fi
+
+  for s in \$@
+   do
+      echo " - \$s"
+      ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME/data" ] && rm -r \\\$HIDOOP_HOME/data"
+  done
+}
+
+
+function clearlogs()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "Clear server logs : \$0 <machine1> [<machine2> ...]"
+    return
+   fi
+
+  for s in \$@
+   do
+      echo " - \$s"
+      ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME" ] && rm \\\$HIDOOP_HOME/*.log"
+  done
+}
+
+
+PS1="${magenta}hidoop-deploy>${delimiter} "
+
+EOF
+)
+
+bash --init-file <(echo "$temp")
