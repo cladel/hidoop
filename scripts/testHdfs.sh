@@ -5,6 +5,10 @@ folder=$HIDOOP_HOME/data/
 
 cd $HIDOOP_CLASSES
 
+echo "Starting namenode..."
+read < <( java -cp $HIDOOP_CLASSES config.AppData >> $HIDOOP_HOME/log & echo \$! ) p0
+sleep 0.5
+
 echo "Starting server..."
 
 java hdfs.HdfsServer &  p1=$!
@@ -20,4 +24,4 @@ diff ${folder}$1 ${folder}r_$1
 
 
 kill $p1
-
+kill $p0

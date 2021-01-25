@@ -139,7 +139,7 @@ public class Writer extends ClientServerTask<Long> {
                     do {
                         read = in.read(buf);
                         // End of the file reached, no need to create an empty chunk
-                        if (read <= 0  || local.length() == offset + read) {
+                        if (read <= 0  || (local.length() == offset + read && Constants.findByte(buf, Constants.NEW_LINE, 0, read) == -1)) {
                             in.close();
                             return new OperationResult<>(id, serverIp, Constants.FILE_EMPTY);
                         }

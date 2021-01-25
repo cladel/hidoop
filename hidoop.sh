@@ -26,14 +26,14 @@ fi
 temp=$(cat <<EOF
 
 # Trouver les adresses ip des serveurs dans conf.xml (sans dupliqués)
-nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u))
+declare -r NODES="$(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | grep -oP '(?<=ip=")[a-zA-Z0-9.]+(?=")' | sort -u)"
 
 # Constantes utiles
 export SSHUSER=$1
 export magenta="\001\033[1;95m\002"
 export delimiter="\001\033[0;00m\002"
 export pnamenode=''
-export NODES=\$(echo "\${nodes[*]}")
+export NODES
 
 
 # Démarrage des serveurs
@@ -48,7 +48,7 @@ sleep 0.5
 echo "Starting servers..."
 
 # Lancer chaque serveur
-for s in \${nodes[@]}
+for s in \$NODES
 do
 
   echo " - \$s"
@@ -77,7 +77,7 @@ function stop()
 
    echo "Stopping servers..."
 
-   for s in \${nodes[@]}
+   for s in \$NODES
    do
 	    echo " - \$s"
 	    ssh $@@\$s "pkill -f 'java .*(ordo.*|hdfs.*)' "

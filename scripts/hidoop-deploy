@@ -23,7 +23,7 @@ function tonode()
    [[ -z \$dest_folder ]] && dest_folder=\$local_home
    echo "Sending files on $SSHUSER@\$1:\${dest_folder}..."
    scp -r src $SSHUSER@\$1:\$dest_folder
-   ssh $SSHUSER@\$1 " [[ -z  \\\$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\\\$HIDOOP_HOME/src ; cd \$dest_folder/src && javac -d \\\$HIDOOP_CLASSES ordo/WorkerImpl.java hdfs/HdfsServer.java application/MyMapReduce.java"
+   ssh $SSHUSER@\$1 " [[ -z  \\\$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\\\$HIDOOP_HOME/src ; cd \$dest_folder/src && javac -d \\\$HIDOOP_CLASSES ordo/WorkerImpl.java hdfs/HdfsServer.java application/MyMapReduce.java config/AppData.java"
 
 
 }

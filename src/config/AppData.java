@@ -69,7 +69,7 @@ public class AppData extends UnicastRemoteObject implements NameNode {
 
             nlist = root.getElementsByTagName("default-chunk-size");
 
-            if (nlist.getLength() == 0){
+            if (nlist.getLength() == 1){
                 Element e = (Element) nlist.item(0);
 
                 float size = Float.parseFloat(e.getAttribute("value"));

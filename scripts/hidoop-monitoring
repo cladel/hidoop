@@ -7,6 +7,10 @@ temp=$(cat <<EOF
 rmihost=$1
 function cmpref()
 {
+   if [ "\$#" -ne 1 ]; then
+    echo "Compare with Count : \$0 <fichier>"
+    return
+   fi
    java -cp $HIDOOP_CLASSES application.Count $HIDOOP_HOME/data/\$1
    cmp <(sort $HIDOOP_HOME/data/count-res) <(sort $HIDOOP_HOME/data/\$1-tot)
 }

@@ -40,6 +40,7 @@ public abstract class ClientServerTask<V> {
             System.out.println("\nInterrupted.");
             onAbort(results);
         });
+
         boolean allOk = false;
 
         if (abortOnError) Runtime.getRuntime().addShutdownHook(restoreIfStop);
@@ -79,14 +80,18 @@ public abstract class ClientServerTask<V> {
                 } else if (abortOnError) break; // For now if an error occurs, abort
 
             }
-            System.out.println();
+            if (printProgress) System.out.println();
 
             if (allOk) {
                 pool.shutdown();
             } else {
                 onAbort(results);
             }
-            Runtime.getRuntime().removeShutdownHook(restoreIfStop);
+            try {
+                Runtime.getRuntime().removeShutdownHook(restoreIfStop);
+            } catch (IllegalStateException e){
+                e.printStackTrace();
+            }
 
 
         } catch (ExecutionException | InterruptedException e){

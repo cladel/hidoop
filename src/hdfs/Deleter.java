@@ -37,7 +37,8 @@ public class Deleter extends ClientServerTask<Long> {
 
     @Override
     boolean onResult(OperationResult<Long> res) {
-        boolean ok = (res.getRes() == 0);
+        long r = res.getRes();
+        boolean ok = (r == 0 || r == Constants.FILE_NOT_FOUND); // ok if not found anyways
         if (!ok) {
             // Print error code
             System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
