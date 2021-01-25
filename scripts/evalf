@@ -7,8 +7,7 @@ if [ "$#" -lt 2 ]; then
 fi
 
 taille=$(wc -c data/"$1" | awk '{print $1}')
-nodes=(${NODES})
-nbmachines=$(echo ${nodes[@]} | wc -w)
+nbmachines=$(echo $NODES | wc -w)
 
 echo "### EVAL: $1 ${taille}B on $nbmachines servers"
 

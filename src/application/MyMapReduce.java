@@ -1,8 +1,6 @@
 package application;
 
 import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
 
 import map.MapReduce;
 import ordo.Job;
@@ -20,9 +18,9 @@ public class MyMapReduce implements MapReduce {
         HashMap<String,Integer> hm = new HashMap<>();
         KV kv;
         while ((kv = reader.read()) != null) {
-            String tokens[] = kv.v.split(" ");
+            String[] tokens = kv.v.split(" ");
             for (String tok : tokens) {
-                if (hm.containsKey(tok)) hm.put(tok, hm.get(tok).intValue()+1);
+                if (hm.containsKey(tok)) hm.put(tok, hm.get(tok) +1);
                 else hm.put(tok, 1);
             }
         }

@@ -9,7 +9,7 @@ import java.util.Arrays;
 public class Constants {
     public static final int PORT = 3000;
     protected static final int BUFFER_SIZE = 8 * 1024 * 1024; // 8 MiB
-    protected static final int CMD_BUFFER_SIZE = 96; // 4 + file_name + 8 bytes
+    protected static final int CMD_BUFFER_SIZE = 128; // 4 + file_name + 8 bytes * 2
     protected final static String SEPARATOR = " ";
     protected final static byte END_CHUNK_DELIMITER = 0x03; // End of text
     protected final static byte NEW_LINE = 0x0a; // End of line

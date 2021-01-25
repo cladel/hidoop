@@ -7,30 +7,25 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.*;
 
-public class Deleter extends ClientTask<Long>{
+
+/**
+ * class representing an HDFS client/server deleting task.
+ */
+public class Deleter extends ClientServerTask<Long> {
 
     private final FileData fd;
     private final String hdfsFname;
-    private int progress = 0;
+
 
     public Deleter(FileData fd, String hdfsFname) {
-        super(fd.getChunkCount());
+        super(fd.getChunkCount(), false);
         this.fd = fd;
         this.hdfsFname = hdfsFname;
     }
 
-    @Override
-    public boolean exec() {
-
-        System.out.println("Deleting file...");
-        System.out.print("# 0 %"); System.out.flush();
-        boolean ok = super.exec();
-        System.out.println();
-        return ok;
-
-    }
 
     @Override
     Callable<OperationResult<Long>> submitTask(int i) {
@@ -46,12 +41,14 @@ public class Deleter extends ClientTask<Long>{
         if (!ok) {
             // Print error code
             System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+res.getRes());
-        } else {
-            System.out.print("\r# "+(++progress*100/fd.getChunkCount())+" %"); System.out.flush();
         }
         return ok;
     }
 
+    @Override
+    void onAbort(List<Future<OperationResult<Long>>> results) {
+        // Keep sending delete cmd here
+    }
 
     /**
      * Callable deleting a chunk from an HdfsServer node

@@ -32,12 +32,18 @@ nodes=($(grep -oP '(?<=<node)[^/]+(?=/>)' "${HIDOOP_HOME}/config/conf.xml" | gre
 export SSHUSER=$1
 export magenta="\001\033[1;95m\002"
 export delimiter="\001\033[0;00m\002"
+export pnamenode=''
 export NODES=\$(echo "\${nodes[*]}")
 
 
 # Démarrage des serveurs
 function start()
 {
+
+
+echo "Starting namenode..."
+read < <( java -cp $HIDOOP_CLASSES config.AppData >> $HIDOOP_HOME/log & echo \$! ) pnamenode
+sleep 0.5
 
 echo "Starting servers..."
 
@@ -51,7 +57,6 @@ do
   javacmd=\$(echo "<hdfs.HdfsServer><ordo.WorkerImpl>" | sed "s|<\([^<>]*\)>|nohup java -cp \\\$HIDOOP_CLASSES \1 >> \\\$HIDOOP_HOME/\$s.log 2>\&1 \& |g ")
   ssh $@@\$s " [[ -z  \\\$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\\\$HIDOOP_HOME/src ; \${javacmd}"
 
-  sleep 0.5
 done
 
 }
@@ -59,13 +64,24 @@ done
 # A la fermeture tuer les serveurs
 function stop()
 {
+
+   echo "Stopping namenode..."
+   if [[ -z \$pnamenode ]]; then
+        kill \$pnamenode
+        wait \$pnamenode 2>/dev/null
+   else 
+        pkill -f 'java .* config.AppData'
+   fi
+
+   sleep 0.5
+
    echo "Stopping servers..."
 
    for s in \${nodes[@]}
    do
 	    echo " - \$s"
 	    ssh $@@\$s "pkill -f 'java .*(ordo.*|hdfs.*)' "
-            sleep 0.5
+        
    done
 }
 
@@ -106,7 +122,7 @@ export -f printconf
 
 function monitoring()
 {
-   source \$HIDOOP_HOME/scripts/hidoop-monitoring \$1
+   source \$HIDOOP_HOME/scripts/hidoop-monitoring \$@
 }
 
 

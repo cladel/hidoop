@@ -11,7 +11,7 @@ import java.util.*;
  * Size is only indicative and is not used to verify files' integrity
  */
 public class FileData implements Serializable{
-    public static final long serialVersionUID = Metadata.serialVersionUID;
+    public static final long serialVersionUID = 1L;
 
     public static final long UNSPECIFIED_SIZE = -1;
 
@@ -96,7 +96,8 @@ public class FileData implements Serializable{
      * @param id id of the chunk
      */
     public List<String> getSourcesForChunk(int id){
-        return Collections.unmodifiableList(chunks.get(id).ipList);
+        ChunkSources cs = chunks.get(id);
+        return cs == null ? null : Collections.unmodifiableList(cs.ipList);
     }
 
     /**
@@ -112,7 +113,7 @@ public class FileData implements Serializable{
 
 
     private class ChunkSources implements Serializable {
-        public static final long serialVersionUID = Metadata.serialVersionUID;
+        public static final long serialVersionUID = FileData.serialVersionUID;
         private final ArrayList<String> ipList;
 
         ChunkSources(){

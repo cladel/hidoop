@@ -19,6 +19,47 @@ function evalf()
 
 }
 
+function logtail()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "tail server logfile : \$0 <machine1> [tail options]"
+    return
+   fi
+   echo \$(ssh $SSHUSER@\$1 "echo \\\$(tail \${@:2} \\\$HIDOOP_HOME/\$1.log)")
+
+}
+
+
+function clearlogs()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "Clear server logs : \$0 <machine1> [<machine2> ...]"
+    return
+   fi
+
+  for s in \$@
+   do
+      echo " - \$s"
+      ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME" ] && rm \\\$HIDOOP_HOME/*.log"
+  done
+}
+
+function nodels()
+{
+   #Verifier parametres
+   if [ "\$#" -lt 1 ]; then
+    echo "tail server logfile : \$0 <machine1> [ls options]"
+    return
+   fi
+   echo \$(ssh $SSHUSER@\$1 "echo \\\$(ls \${@:2} \\\$HIDOOP_HOME/data/)")
+
+}
+
+
+
+
 PS1="${magenta}hidoop-monitoring>${delimiter} "
 
 EOF

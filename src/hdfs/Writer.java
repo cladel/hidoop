@@ -7,68 +7,42 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
-public class Writer extends ClientTask<Long>{
+/**
+ * class representing an HDFS client/server writing task.
+ */
+public class Writer extends ClientServerTask<Long> {
 
     private final long chunkSize;
     private final String[] SERVERS_IP;
     private final File local;
     private final Format.Type fmt;
-    private int count;
     private final int start_id;
     private final String localFSSourceFname;
-    private FileData fd;
+    private final FileData fd;
     private int serverIndex = 0;
     private int progress = 0;
+    private int chunkCount = count;
 
-    protected Writer(FileData fd, String[] servers, File local, long chunkSize, int count, Format.Type fmt) {
-        super(count);
+    protected Writer(FileData fd, String[] servers, File local, long chunkSize, Format.Type fmt) {
+        super((int) (local.length() / chunkSize) + (local.length() % chunkSize == 0 ? 0 : 1), true);
         this.fd = fd;
-        this.count = count;
         this.fmt = fmt;
         this.SERVERS_IP = servers;
         this.local = local;
         this.chunkSize = chunkSize;
         this.localFSSourceFname = local.getName();
         this.start_id = 0;
-
     }
 
 
     public boolean exec() {
-
         System.out.println("Splitting file in "+count+" chunks...");
-        System.out.print("# 0 %"); System.out.flush();
-        boolean allOk = super.exec();
-        System.out.println();
-        return allOk;
+        return super.exec();
     }
 
-    @Override
-    void rollback(List<Future<OperationResult<Long>>> results) {
-        super.rollback(results);
-        System.out.print("dbg");
-        List<Future<OperationResult<Long>>> rollback = results.stream()
-                .filter(task -> !task.cancel(true))
-                .collect(Collectors.toList());
 
-       for (Future<OperationResult<Long>> task : rollback){
-           try {
-               OperationResult<Long> r = task.get();
-               fd.addChunkHandle(r.getId(), r.getIpSource());
-           } catch (InterruptedException | ExecutionException e){
-               e.printStackTrace();
-           }
-        }
-
-            Deleter del = new Deleter(fd, localFSSourceFname);
-            del.exec();
-
-    }
 
     @Override
     Write submitTask(int i) {
@@ -80,17 +54,20 @@ public class Writer extends ClientTask<Long>{
     }
 
     @Override
+    public int getProgress() {
+        return (progress * 100 / chunkCount);
+    }
+
+    @Override
     boolean onResult(OperationResult<Long> res) {
 
         long resCode = res.getRes();
         if (resCode == 0) {
             fd.addChunkHandle(res.getId(), res.getIpSource());
-            System.out.print("\r# " + (++progress * 100 / count) + " %");
-            System.out.flush();
+            progress++;
             return true;
         } else if (resCode == Constants.FILE_EMPTY) { // Just ignore an empty chunk
-            System.out.print("\r# " + (progress * 100 / --count) + " %");
-            System.out.flush();
+            chunkCount--;
             return true;
         } else {
 
@@ -108,9 +85,7 @@ public class Writer extends ClientTask<Long>{
 
             } else {
                 // TODO implement retry mechanism
-
                 System.out.println("\nError. Aborting...");
-
                 return false;
             }
         }
@@ -131,7 +106,7 @@ public class Writer extends ClientTask<Long>{
 
         public Write(String name, int id, File local, long chunkSize, long offset, String serverIp) {
 
-            this.command = Commands.HDFS_WRITE.toString() + " " + name + " ";
+            this.command = Commands.HDFS_WRITE.toString() + Constants.SEPARATOR + name + Constants.SEPARATOR;
             this.local = local;
             this.chunkSize = chunkSize;
             this.offset = offset;
@@ -196,20 +171,23 @@ public class Writer extends ClientTask<Long>{
 
 
                 // Minimum nb of bytes sent is chunkSize or remaining size of file minus the ignored end of previous line
-                long minChunkSize = Math.min(chunkSize, local.length() - offset) - prevLineOffset;
+                long minChunkSize = Math.min(chunkSize, local.length() - offset) - prevLineOffset ;
 
 
                 // Send command header
                 byte[] cmd;
-                cmd = command.concat(String.valueOf(minChunkSize)).getBytes(StandardCharsets.UTF_8);
+                cmd = command.concat(String.valueOf(minChunkSize))
+                        .concat(Constants.SEPARATOR)
+                        .concat(String.valueOf(chunkSize))
+                        .getBytes(StandardCharsets.UTF_8);
                 cmd = Arrays.copyOf(cmd, Constants.CMD_BUFFER_SIZE);
-                //System.out.println("Sending to "+serverIp+" : "+new String(cmd, StandardCharsets.UTF_8));
+
                 os.write(cmd);
 
                 // Wait for server available space confirmation
                 is.readNBytes(cmd, 0, Long.BYTES);
                 long res = Constants.getLong(cmd);
-                if (res != 0){
+                if (res < 0){
                     // If error stop exchange
                     in.close();
                     hdfsSocket.close();

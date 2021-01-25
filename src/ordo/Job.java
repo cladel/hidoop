@@ -5,9 +5,6 @@ import formats.*;
 import hdfs.Deleter;
 import hdfs.Reader;
 import map.MapReduce;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -18,7 +15,6 @@ import java.rmi.RemoteException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 
 public class Job implements JobInterface{
     Format.Type fType;
@@ -47,8 +43,7 @@ public class Job implements JobInterface{
 
         try {
             // Recuperer les metadonnées et les ip des serveurs
-            AppData m = AppData.loadConfigAndMeta(false);
-            Metadata data = m.getMetadata();
+            NameNode data = (NameNode) Naming.lookup("//localhost:" + NameNode.PORT + "/namenode");
 
             Format.Type ft;
 
@@ -79,15 +74,13 @@ public class Job implements JobInterface{
                 newfd.addChunkHandle(i, server);
             }
 
-        //    data.addFileData(fName+"-res", newfd);
-        //    HdfsClient.useData(m);
 
             // Attente avant de récupérer les résultats des workers
             cb.attente();
             pool.shutdown();
 
             // Récupération
-         //   HdfsClient.HdfsRead(fName+"-res", fName + "-res");
+            System.out.println("Reading map results...");
             File tmp = new File(Project.getDataPath()+fName + "-res");
             Reader reader = new Reader(newfd, fName+"-res", tmp);
             if (!reader.exec()) throw new RuntimeException();
@@ -114,15 +107,14 @@ public class Job implements JobInterface{
 
             // Delete à la toute fin
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-
-                Deleter del = new Deleter(newfd, fName+"-res");
-                del.exec();
+               Deleter del = new Deleter(newfd, fName+"-res");
+               del.setPrintProgress(false);
+               del.exec();
 
             }));
             tmp.deleteOnExit();
 
-        } catch (InterruptedException | IOException | TimeoutException | ParserConfigurationException |
-                SAXException | ClassNotFoundException e) {
+        } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
             System.exit(1);

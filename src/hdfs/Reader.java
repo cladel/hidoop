@@ -9,19 +9,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 
-
-public class Reader extends ClientTask<Map.Entry<Long, File>>{
+/**
+ * class representing an HDFS client/server reading task.
+ */
+public class Reader extends ClientServerTask<Map.Entry<Long, File>> {
 
     private final FileData fd;
     private final String hdfsFname;
-    private int progress = 0;
     private final byte[] buf = new byte[Constants.BUFFER_SIZE];
     private final FileOutputStream out;
 
     public Reader(FileData fd, String hdfsFname, File local) throws FileNotFoundException {
-        super(fd.getChunkCount());
+        super(fd.getChunkCount(), true);
         this.fd = fd;
         this.hdfsFname = hdfsFname;
         out = new FileOutputStream(local, false);
@@ -29,9 +29,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
 
     @Override
     public boolean exec() {
-        System.out.print("# 0 %"); System.out.flush();
         boolean ok = super.exec();
-        System.out.println();
         try {
             out.close();
         } catch (IOException e) {
@@ -52,38 +50,36 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
     boolean onResult(OperationResult<Map.Entry<Long, File>> res) {
         // Append all tmp files in order
 
-            Map.Entry<Long,File> resObj = res.getRes();
-            File tmp = resObj.getValue();
-            long resCode = resObj.getKey();
+        Map.Entry<Long, File> resObj = res.getRes();
+        File tmp = resObj.getValue();
+        long resCode = resObj.getKey();
 
-            // Append only if there's no error
-            if (resCode == 0) {
-                if (tmp != null) {
-                    try {
-                        FileInputStream in = new FileInputStream(tmp);
-                        int read;
-                        while ((read = in.read(buf)) > 0) {
-                            out.write(buf, 0, read);
-                        }
+        // Append only if there's no error
+        if (resCode == 0) {
+            if (tmp == null) return false;
+            else {
+                try {
+                    FileInputStream in = new FileInputStream(tmp);
+                    int read;
+                    while ((read = in.read(buf)) > 0) {
+                        out.write(buf, 0, read);
+                    }
+                    in.close();
 
-                        in.close();
-                        System.out.print("\r# " + (++progress * 100 / fd.getChunkCount()) + " %");
-                        System.out.flush();
-
-                } catch(IOException e){
+                } catch (IOException e) {
                     e.printStackTrace();
                     return false;
                 } finally {
-                        tmp.deleteOnExit();
-                    }
-            }
+                    tmp.deleteOnExit();
+                }
                 return true;
             }
-            else {
-                if (tmp != null) tmp.deleteOnExit();
-                System.err.println(res.getIpSource()+ " : (chunkID "+res.getId()+") error "+resCode);
-                return false;
-            }
+
+        } else {
+            if (tmp != null) tmp.deleteOnExit();
+            System.err.println(res.getIpSource() + " : (chunkID " + res.getId() + ") error " + resCode);
+            return false;
+        }
 
 
     }
@@ -91,7 +87,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
     /**
      * Callable reading a chunk from an HdfsServer node
      */
-    private static class Read implements Callable<OperationResult<Map.Entry<Long, File>>> {
+    protected static class Read implements Callable<OperationResult<Map.Entry<Long, File>>> {
         private final String command;
         private final File local;
         private final String serverIp;
@@ -104,10 +100,10 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
             String tmpName = name + ".tmp";
             this.serverIp = serverIp;
             this.id = id;
-            try{
-                local1 = new File(Project.getDataPath()+(tmpName));
+            try {
+                local1 = new File(Project.getDataPath() + (tmpName));
                 local1.createNewFile();
-            } catch (IOException e){
+            } catch (IOException e) {
                 local1 = null;
                 e.printStackTrace();
             }
@@ -136,7 +132,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
 
                 if (length <= 0) {
                     hdfsSocket.close();
-                    return new OperationResult<>(id, serverIp, Map.entry((long)Constants.FILE_NOT_FOUND, local));
+                    return new OperationResult<>(id, serverIp, Map.entry((long) Constants.FILE_NOT_FOUND, local));
                 }
 
                 FileOutputStream out = new FileOutputStream(local);
@@ -147,7 +143,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
                 // Copy bytes to file while receiving expected bytes
                 while (total < length && (read = is.read(buf)) > 0) {
                     //System.out.print(serverIp+" "+id+" <- "+new String(buf, StandardCharsets.UTF_8));
-                    out.write(buf,0,read);
+                    out.write(buf, 0, read);
                     total += read;
                 }
 
@@ -155,7 +151,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
                 // Check size integrity
                 if (total != length) {
                     status = Constants.INCONSISTENT_FILE_SIZE;
-                    System.err.println(serverIp + " (" + id + ") RD error : "+total+" "+length);
+                    System.err.println(serverIp + " (" + id + ") RD error : " + total + " " + length);
                 }
 
 
@@ -166,7 +162,7 @@ public class Reader extends ClientTask<Map.Entry<Long, File>>{
                 return new OperationResult<>(id, serverIp, Map.entry(status, local));
 
             } catch (Exception e) {
-                System.out.println(serverIp+" ("+id+") : "+e.getMessage());
+                System.out.println(serverIp + " (" + id + ") : " + e.getMessage());
                 e.printStackTrace();
                 return new OperationResult<>(id, serverIp, Map.entry(Constants.IO_ERROR, local));
             }

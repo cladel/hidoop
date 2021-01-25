@@ -22,14 +22,14 @@ public class Count {
         try {
             long t1 = System.currentTimeMillis();
 
-            HashMap<String,Integer> hm = new HashMap<String,Integer>();
+            HashMap<String,Integer> hm = new HashMap<>();
             LineNumberReader lnr = new LineNumberReader(new InputStreamReader(new FileInputStream(args[0])));
             while (true) {
                 String l = lnr.readLine();
                 if (l == null) break;
-                String tokens[] = l.split(" ");
+                String[] tokens = l.split(" ");
                 for (String tok : tokens) {
-                    if (hm.containsKey(tok)) hm.put(tok, hm.get(tok).intValue()+1);
+                    if (hm.containsKey(tok)) hm.put(tok, hm.get(tok) +1);
                     else hm.put(tok, 1);
                 }
             }

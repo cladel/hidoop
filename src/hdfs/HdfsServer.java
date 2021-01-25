@@ -51,71 +51,85 @@ public class HdfsServer {
 
                     /* WRITE */
                     case HDFS_WRITE :
-                        if (args.length != 3) {
-                            System.err.println("Erreur HDFS_WRITE Serveur : 2 arguments attendus, trouvés "+args.length);
+                        if (args.length != 4) {
+                            System.err.println("Erreur HDFS_WRITE Serveur : 3 arguments attendus, trouvés "+args.length);
                         } else {
-                            nameFile = args[1];
-                            long minFileSize = Long.parseLong(args[2]);
+                            File fichier = null;
+                            FileOutputStream fileStream = null;
+                            try {
+                                nameFile = args[1];
+                                long minFileSize = Long.parseLong(args[2]);
+                                long avgSize = Long.parseLong(args[3]);
 
-                            // Confirmation allocation possible sur le serveur
-                            File dir = new File(Project.getDataPath());
-                            long usable = dir.getUsableSpace();
-                            if (usable <= Constants.CHUNK_LIMIT_FACTOR * minFileSize){
-                                System.err.println("Erreur espace insuffisant : "+ usable + " bytes.");
-                                Constants.putLong(buf, Constants.FILE_TOO_LARGE);
-                                ouS.write(buf,0,Long.BYTES);
-                                socket.close();
-                                return;
-                            } else {
-                                Constants.putLong(buf, 0);
-                                ouS.write(buf,0,Long.BYTES);
-                            }
-
-                            int nbytesTotal = 0;
-                            /** Buffer */
-                            byte[] buffer = new byte[Constants.BUFFER_SIZE];
-
-                            /* Fichier crée */
-                            File fichier = new File(Project.getDataPath() + nameFile);
-                            FileOutputStream fileStream = new FileOutputStream(fichier);
-
-                            int end = -1;
-
-                            nbOctetsInLus = inS.read(buffer);
-                            while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER,0,nbOctetsInLus)) == -1){
-
-                                if (nbytesTotal > minFileSize * Constants.CHUNK_LIMIT_FACTOR){
-                                    // Refuser chunk trop gros (sécurité)
-                                    Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
-                                    ouS.write(buf,0,Long.BYTES);
+                                // Confirmation allocation possible sur le serveur
+                                File dir = new File(Project.getDataPath());
+                                long usable = dir.getUsableSpace();
+                                if (usable <= Constants.CHUNK_LIMIT_FACTOR * avgSize) {
+                                    System.err.println("Erreur espace insuffisant : " + usable + " bytes.");
+                                    Constants.putLong(buf, Constants.FILE_TOO_LARGE);
+                                    ouS.write(buf, 0, Long.BYTES);
                                     socket.close();
                                     return;
+                                } else {
+                                    Constants.putLong(buf, 10); // Any positive value
+                                    ouS.write(buf, 0, Long.BYTES);
                                 }
-                                fileStream.write(buffer, 0, nbOctetsInLus);
+
+                                int nbytesTotal = 0;
+                                /** Buffer */
+                                byte[] buffer = new byte[Constants.BUFFER_SIZE];
+
+                                /* Fichier crée */
+                                fichier = new File(Project.getDataPath() + nameFile);
+                                fileStream = new FileOutputStream(fichier);
+
+                                int end = -1;
+
                                 nbOctetsInLus = inS.read(buffer);
-                            }
+                                // On ne cherche pas la fin du chunk inutilement avant une taille min
+                                while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER, 0, nbOctetsInLus)) == -1) {
 
-                            // Mise à jour de la taille écrite
-                            nbytesTotal -= (nbOctetsInLus - end);
-                            if (nbytesTotal > minFileSize * Constants.CHUNK_LIMIT_FACTOR) {
-                                // Refuser chunk trop gros (sécurité)
-                                Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
-                                ouS.write(buf,0,Long.BYTES);
-                                socket.close();
-                                return;
-                            } else fileStream.write(buffer, 0, end);
+                                    if (nbytesTotal > avgSize * Constants.CHUNK_LIMIT_FACTOR) {
+                                        // Refuser chunk trop gros (sécurité)
+                                        Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
+                                        System.err.println("WR error : " + nbytesTotal + " / "+avgSize);
+                                        ouS.write(buf, 0, Long.BYTES);
+                                        socket.close();
+                                        return;
+                                    }
+                                    fileStream.write(buffer, 0, nbOctetsInLus);
+                                    nbOctetsInLus = inS.read(buffer);
+                                }
+
+                                // Mise à jour de la taille écrite
+                                nbytesTotal -= (nbOctetsInLus - end);
+                                if (nbytesTotal > avgSize * Constants.CHUNK_LIMIT_FACTOR) {
+                                    // Refuser chunk trop gros (sécurité)
+                                    Constants.putLong(buf, Constants.CHUNK_TOO_LARGE);
+                                    System.err.println("WR* error : " + nbytesTotal + " / "+avgSize);
+                                    ouS.write(buf, 0, Long.BYTES);
+                                    socket.close();
+                                    return;
+                                } else fileStream.write(buffer, 0, end);
 
 
-
-                            if (nbytesTotal > 0) {
-                                Constants.putLong(buf, nbytesTotal);
-                                ouS.write(buf,0,Long.BYTES);
-                                System.out.println(nameFile + " saved ("+nbytesTotal+" B).");
-                            } else {
-                                Constants.putLong(buf, Constants.FILE_EMPTY);
-                                ouS.write(buf,0,Long.BYTES);
-                                fileStream.close();
-                                fichier.delete();
+                                if (nbytesTotal > 0) {
+                                    Constants.putLong(buf, nbytesTotal);
+                                    ouS.write(buf, 0, Long.BYTES);
+                                    System.out.println(nameFile + " saved (" + nbytesTotal + " B).");
+                                } else {
+                                    Constants.putLong(buf, Constants.FILE_EMPTY);
+                                    System.err.println(nameFile + " empty.");
+                                    ouS.write(buf, 0, Long.BYTES);
+                                    fileStream.close();
+                                    fichier.delete();
+                                }
+                            } catch (IOException e) {
+                                // Delete part of chunk
+                                if(fileStream != null) {
+                                    fileStream.close();
+                                    fichier.delete();
+                                }
                             }
                         }
                         break;
@@ -181,9 +195,16 @@ public class HdfsServer {
             }
 
         /** Fermeture */
-        socket.close();
+              socket.close();
             } catch (Exception e){
                 e.printStackTrace();
+                if (!socket.isClosed()){
+                    try {
+                        socket.close();
+                    } catch (IOException ex){
+                        ex.printStackTrace();
+                    }
+                }
             }
 
         }

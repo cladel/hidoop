@@ -72,20 +72,6 @@ function rmnodedata()
 }
 
 
-function clearlogs()
-{
-   #Verifier parametres
-   if [ "\$#" -lt 1 ]; then
-    echo "Clear server logs : \$0 <machine1> [<machine2> ...]"
-    return
-   fi
-
-  for s in \$@
-   do
-      echo " - \$s"
-      ssh $SSHUSER@\$s "[ -d "\\\$HIDOOP_HOME" ] && rm \\\$HIDOOP_HOME/*.log"
-  done
-}
 
 
 PS1="${magenta}hidoop-deploy>${delimiter} "

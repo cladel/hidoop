@@ -1,26 +1,25 @@
 package hdfs;
 
-import config.FileData;
-import config.AppData;
-import config.Metadata;
-import config.Project;
+import config.*;
 import formats.Format;
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
 import java.text.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
 public class HdfsClient {
-    private static AppData data;
+    private static NameNode data;
   
 
     private static void usage() {
         System.out.println("Use: java HdfsClient { -r <file> [localDest] " +
                 "| -w <file> [-f ln|kv] [ --chunks-size=<sizeInBytes> ] [ --rep=<repFactor> ] " +
                 "| -d <file> " +
-                "| -l [-d] }\n"+
+                "| -l [--detail] }\n"+
                 "Default format is ln. \n" +
                 "--rep is currently not supported and is always 1.");
     }
@@ -42,11 +41,11 @@ public class HdfsClient {
     /**
      * Print file list
      */
-    public static void HdfsList(boolean details) {
-        DateFormat df = new SimpleDateFormat();
-        Metadata data = HdfsClient.data.getMetadata();
+    public static void HdfsList(boolean details) throws RemoteException {
+
         FileData fd;
         String size, chunkSize;
+        DateFormat df = new SimpleDateFormat();
         System.out.println("-----------------------------------------\n");
         System.out.println(data.getFileCount()+ " saved (last saving " + df.format(data.getSaveDate())+") : ");
 
@@ -85,41 +84,37 @@ public class HdfsClient {
     public static void HdfsWrite(Format.Type fmt, String localFSSourceFname, int repFactor, long chunkSize)
             throws IOException {
 
-        // Control fileName length because of buffers
-        if (localFSSourceFname.length() > Constants.MAX_NAME_LENGTH) localFSSourceFname = localFSSourceFname.substring(0,Constants.MAX_NAME_LENGTH);
 
         // Get metadata and servers location
-        Metadata data = getMetadata();
         final String[] SERVERS_IP = HdfsClient.data.getServersIp();
-
-        final File local = new File(getPathForFile(localFSSourceFname));
-        localFSSourceFname = local.getName();
-
-        long size = local.length(); // size in bytes
-
-        FileData fd = data.retrieveFileData(localFSSourceFname);
-        boolean isNew = (fd == null);
-
-        // Use default size
+        // Use default size if negative
         if (chunkSize <= 0) chunkSize = HdfsClient.data.getDefaultChunkSize();   // distributed : chunkSize = size / SERVERS_IP.length + (size % SERVERS_IP.length == 0 ? 0 : 1);
 
 
+        // Control fileName length because of buffers
+        if (localFSSourceFname.length() > Constants.MAX_NAME_LENGTH) localFSSourceFname = localFSSourceFname.substring(0,Constants.MAX_NAME_LENGTH);
+        // Get local file
+        final File local = new File(getPathForFile(localFSSourceFname));
+        localFSSourceFname = local.getName();
+
+
+        FileData fd = data.retrieveFileData(localFSSourceFname);
+        boolean isNew = (fd == null);
         if (isNew) {
             // Create file
-            fd = new FileData(fmt, size, chunkSize);
+            fd = new FileData(fmt, local.length(), chunkSize);
 
         } else {
             // TODO is append possible?
             throw new FileAlreadyExistsException(localFSSourceFname);
         }
-        int count = (int) (size / chunkSize) + (size % chunkSize == 0 ? 0 : 1);
 
-        Writer writer = new Writer(fd, SERVERS_IP, local, chunkSize, count, fmt);
+
+        Writer writer = new Writer(fd, SERVERS_IP, local, chunkSize, fmt);
 
             // Save updated metadata
             if (writer.exec()) {
-                HdfsClient.getMetadata().addFileData(localFSSourceFname, fd);
-                HdfsClient.data.saveMetadata(data);
+                data.addFileData(localFSSourceFname, fd);
                 System.out.println(localFSSourceFname + " successfully saved.");
             } else {
                 System.out.println("Error writing file.");
@@ -137,16 +132,16 @@ public class HdfsClient {
     public static void HdfsRead(String hdfsFname, String localFSDestFname)
             throws IOException {
 
-        if (localFSDestFname == null) localFSDestFname = "r_"+hdfsFname;
-
-        FileData fd = getMetadata().retrieveFileData(hdfsFname);
+        FileData fd = data.retrieveFileData(hdfsFname);
         if (fd == null) throw new FileNotFoundException(hdfsFname);
 
+        // Local dest file
+        if (localFSDestFname == null) localFSDestFname = "r_"+hdfsFname;
         File local = new File(getPathForFile(localFSDestFname));
         localFSDestFname = local.getName();
 
-        System.out.println("Reading file...");
 
+        System.out.println("Reading file...");
         Reader rd = new Reader(fd, hdfsFname, local);
 
         if (rd.exec()) System.out.println(hdfsFname + " successfully read to "+localFSDestFname+".");
@@ -164,26 +159,22 @@ public class HdfsClient {
     public static void HdfsDelete(String hdfsFname)
             throws IOException {
 
-        Metadata data = getMetadata();
+       // Metadata data = getMetadata();
         FileData fd = data.retrieveFileData(hdfsFname);
         if (fd == null) throw new FileNotFoundException(hdfsFname);
 
+
+        System.out.println("Deleting file...");
         Deleter del = new Deleter(fd, hdfsFname);
 
-        // Save updated metadata
+
         if (del.exec()) {
-            HdfsClient.getMetadata().removeFileData(hdfsFname);
-            HdfsClient.data.saveMetadata(data);
+            data.removeFileData(hdfsFname);
             System.out.println(hdfsFname + " successfully deleted.");
         } else {
             System.out.println("Error deleting file.");
         }
 
-    }
-
-
-    private static Metadata getMetadata() {
-        return data.getMetadata();
     }
 
     public static void main(String[] args) {
@@ -198,7 +189,7 @@ public class HdfsClient {
 
             switch (args[0]) {
                 case "-l":
-                    data = AppData.loadConfigAndMeta(false);
+                    data = (NameNode) Naming.lookup("//localhost:" + NameNode.PORT + "/namenode");//AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     boolean details = false;
                     if (args.length > 1) {
@@ -212,13 +203,13 @@ public class HdfsClient {
                     System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-r":
-                    data = AppData.loadConfigAndMeta(false);
+                    data = (NameNode) Naming.lookup("//localhost:" + NameNode.PORT + "/namenode");//AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsRead(args[1], args.length > 2 ? args[2] : null);
                     System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
                     break;
                 case "-d":
-                    data = AppData.loadConfigAndMeta(false);
+                    data = (NameNode) Naming.lookup("//localhost:" + NameNode.PORT + "/namenode");//AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsDelete(args[1]);
                     System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
@@ -271,7 +262,7 @@ public class HdfsClient {
 
                     }
                     // Ignoring rep for now
-                    data = AppData.loadConfigAndMeta(true);
+                    data = (NameNode) Naming.lookup("//localhost:" + NameNode.PORT + "/namenode");//AppData.loadConfigAndMeta(false);
                     start = System.currentTimeMillis();
                     HdfsWrite(fmt, args[1], rep, chunksMode);
                     System.out.println("-- time (ms) : "+(System.currentTimeMillis() - start));
