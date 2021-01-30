@@ -94,24 +94,23 @@ public class Constants {
      * @param unit unit bytes, B, kB, MB, GB, TB (case insensitive)
      * @return size as long
      */
-    public static long getSize(float size, String unit){
-        long ld = (long) size;
+    public static long getSize(long size, String unit){
         switch (unit.toUpperCase()){
             case "TB":
-                ld *= 1000;
+                size *= 1000;
             case "GB":
-                ld *= 1000;
+                size *= 1000;
             case "MB":
-                ld *= 1000;
+                size *= 1000;
             case "KB":
-                ld *= 1000;
+                size *= 1000;
             case "B":
             case "BYTES":
                 break;
             default:
-                ld = -1;
+                size = -1;
                 break;
         }
-        return ld;
+        return size;
     }
 }

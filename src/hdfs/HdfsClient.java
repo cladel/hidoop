@@ -238,7 +238,8 @@ public class HdfsClient {
                             if(m.matches()) {
                                 String unit = m.group("unit");
                                 if (unit == null) unit = "B";
-                                chunksMode = Constants.getSize(Float.parseFloat(m.group("size")), unit);
+                                chunksMode = Constants.getSize(Long.parseLong(m.group("size")), unit);
+
                             } else {
                                 chunksMode = -1;
                             }

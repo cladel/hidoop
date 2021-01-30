@@ -84,7 +84,7 @@ public class Job implements JobInterface{
             File tmp = new File(Project.getDataPath()+fName + "-res");
             Reader reader = new Reader(newfd, fName+"-res", tmp);
             if (!reader.exec()) throw new RuntimeException();
-            if (!tmp.exists()) throw new IOException("Erreur de récupération des chunks.");
+            if (!tmp.exists()) throw new IOException("Error reading chunks.");
             System.out.println("Launching reduce task...");
 
             Format frReduce;

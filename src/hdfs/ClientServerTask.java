@@ -27,7 +27,6 @@ public abstract class ClientServerTask<V> {
         int procCount = Math.min(count, Runtime.getRuntime().availableProcessors());
         pool = Executors.newFixedThreadPool(procCount);
         results =  new ArrayList<>(count);
-
     }
 
     /**
@@ -36,6 +35,7 @@ public abstract class ClientServerTask<V> {
      */
     public boolean exec() {
 
+        // Launched if process killed before normal termination
         Thread restoreIfStop = new Thread(() -> {
             System.out.println("\nInterrupted.");
             onAbort(results);
@@ -47,7 +47,7 @@ public abstract class ClientServerTask<V> {
 
         try {
 
-            // Thread launching operations on the chunks
+            // Thread launching operations on the chunks as a producer for the current thread
             pool.submit(() -> {
                 try {
                     // Submit each chunk to the pool
@@ -58,26 +58,26 @@ public abstract class ClientServerTask<V> {
                 } catch (Exception e){e.printStackTrace();}
             });
 
-
-            // Current thread getting results
+            // Current thread getting results (consumer)
             allOk = true;
 
             if (printProgress) {
                 System.out.print("# 0 %");
                 System.out.flush();
             }
-            for (int i = 0; i < count; i++) {
 
+            for (int i = 0; i < count; i++) {
+                // Read submitted operation result
                 sem.acquire();
                 Future<OperationResult<V>> b = results.get(i);
                 OperationResult<V> res = b.get();
-                allOk = onResult(res); // returns allOk
+                allOk = onResult(res); // true if no error
                 if (allOk){
                     if (printProgress) {
                         System.out.print("\r# " + getProgress() + " %");
                         System.out.flush();
                     }
-                } else if (abortOnError) break; // For now if an error occurs, abort
+                } else if (abortOnError) break; // Abort if an error occurs
 
             }
             if (printProgress) System.out.println();
@@ -90,7 +90,7 @@ public abstract class ClientServerTask<V> {
             try {
                 Runtime.getRuntime().removeShutdownHook(restoreIfStop);
             } catch (IllegalStateException e){
-                e.printStackTrace();
+                // JVM was stopped
             }
 
 
@@ -101,7 +101,7 @@ public abstract class ClientServerTask<V> {
     }
 
     /**
-     * Action to cancel current task and rollback to previous hdfs state.
+     * Called when this task is cancelled.
      * @param tasks tasks scheduled
      */
     void onAbort(List<Future<OperationResult<V>>> tasks){
@@ -109,7 +109,7 @@ public abstract class ClientServerTask<V> {
     }
 
     /**
-     * Generate a subtask associated with a particular chunk.
+     * Called to create a subtask associated with a particular chunk.
      * @param i chunk number
      * @return subtask
      */
@@ -122,15 +122,24 @@ public abstract class ClientServerTask<V> {
      */
     abstract boolean onResult(OperationResult<V> res);
 
-
+    /**
+     * Called when progress is about to be updated.
+     * @return new value
+     */
     int getProgress(){
         return (++progress * 100 / count);
     }
 
+    /**
+     * Set if progress should be printed to output
+     */
     public void setPrintProgress(boolean printProgress) {
         this.printProgress = printProgress;
     }
 
+    /**
+     * True if progress is printed to output
+     */
     public boolean printsProgress() {
         return printProgress;
     }

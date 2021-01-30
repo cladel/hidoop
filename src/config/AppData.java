@@ -72,9 +72,9 @@ public class AppData extends UnicastRemoteObject implements NameNode {
             if (nlist.getLength() == 1){
                 Element e = (Element) nlist.item(0);
 
-                float size = Float.parseFloat(e.getAttribute("value"));
+                long size = Long.parseLong(e.getAttribute("value"));
                 long s = Constants.getSize(size, e.getAttribute("unit"));
-                ld.defaultChunkSize = (s < 0) ? (long)size : s;
+                ld.defaultChunkSize = (s < 0) ? size : s;
 
             }
 
@@ -186,8 +186,6 @@ public class AppData extends UnicastRemoteObject implements NameNode {
             data.saveDate = new Date();
             FileOutputStream file = new FileOutputStream(f);
             ObjectOutputStream in = new ObjectOutputStream(file);
-
-
             in.writeObject(data);
             in.close();
             file.close();

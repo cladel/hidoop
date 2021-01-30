@@ -86,6 +86,7 @@ public class HdfsServer {
                                 int end = -1;
 
                                 nbOctetsInLus = inS.read(buffer);
+                                if (nbOctetsInLus < 0) throw new IOException(nameFile+" : EOF before chunk.");
                                 // On ne cherche pas la fin du chunk inutilement avant une taille min
                                 while ((nbytesTotal += nbOctetsInLus) < minFileSize || (end = Constants.findByte(buffer, Constants.END_CHUNK_DELIMITER, 0, nbOctetsInLus)) == -1) {
 
@@ -99,6 +100,7 @@ public class HdfsServer {
                                     }
                                     fileStream.write(buffer, 0, nbOctetsInLus);
                                     nbOctetsInLus = inS.read(buffer);
+                                    if (nbOctetsInLus < 0) throw new IOException(nameFile + " : Premature end of chunk at byte "+nbytesTotal);
                                 }
 
                                 // Mise à jour de la taille écrite
@@ -125,6 +127,7 @@ public class HdfsServer {
                                     fichier.delete();
                                 }
                             } catch (IOException e) {
+                                e.printStackTrace();
                                 // Delete part of chunk
                                 if(fileStream != null) {
                                     fileStream.close();

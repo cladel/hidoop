@@ -5,12 +5,17 @@
 # Shell pour l'application
 temp=$(cat <<EOF
 
+function compile()
+{
+   [[ -z  \$HIDOOP_CLASSES ]] && HIDOOP_CLASSES=\$HIDOOP_HOME/src ; cd \$HIDOOP_HOME/src && javac -d \$HIDOOP_CLASSES ordo/WorkerImpl.java hdfs/HdfsServer.java application/MyMapReduce.java config/AppData.java application/Count.java
+
+}
 
 function tonode()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "Deploy one server : \$0 <machine> [destfolder]"
+    echo "Deploy one server : \${FUNCNAME[ 0 ]} <machine> [destfolder]"
     return
    fi
 
@@ -44,7 +49,7 @@ function rmhome()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "Remove HIDOOP_HOME from a server : \$0 <machine1> [<machine2> ...]"
+    echo "Remove HIDOOP_HOME from a server : \${FUNCNAME[ 0 ]} <machine1> [<machine2> ...]"
     return
    fi
 
@@ -60,7 +65,7 @@ function rmnodedata()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "Remove data from a server : \$0 <machine1> [<machine2> ...]"
+    echo "Remove data from a server : \${FUNCNAME[ 0 ]} <machine1> [<machine2> ...]"
     return
    fi
 
@@ -71,6 +76,11 @@ function rmnodedata()
   done
 }
 
+function help()
+{
+   echo 'compile tonode mkhome rmhome rmnodedata'
+
+}
 
 
 

@@ -117,6 +117,7 @@ public class Reader extends ClientServerTask<Map.Entry<Long, File>> {
             try {
                 if (local == null) throw new IOException("Error creating tmp file.");
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
+                hdfsSocket.setSoTimeout(120*1000); // Wait read for max 120 seconds
                 OutputStream os = hdfsSocket.getOutputStream();
                 InputStream is = hdfsSocket.getInputStream();
 

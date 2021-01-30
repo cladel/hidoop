@@ -8,7 +8,7 @@ rmihost=$1
 function cmpref()
 {
    if [ "\$#" -ne 1 ]; then
-    echo "Compare with Count : \$0 <fichier>"
+    echo "Compare with Count : \${FUNCNAME[ 0 ]} <fichier>"
     return
    fi
    java -cp $HIDOOP_CLASSES application.Count $HIDOOP_HOME/data/\$1
@@ -27,7 +27,7 @@ function logtail()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "tail server logfile : \$0 <machine1> [tail options]"
+    echo "tail server logfile : \${FUNCNAME[ 0 ]} <machine1> [tail options]"
     return
    fi
    echo \$(ssh $SSHUSER@\$1 "echo \\\$(tail \${@:2} \\\$HIDOOP_HOME/\$1.log)")
@@ -35,11 +35,11 @@ function logtail()
 }
 
 
-function clearlogs()
+function logrm()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "Clear server logs : \$0 <machine1> [<machine2> ...]"
+    echo "rm server logs : \${FUNCNAME[ 0 ]} <machine1> [<machine2> ...]"
     return
    fi
 
@@ -54,13 +54,18 @@ function nodels()
 {
    #Verifier parametres
    if [ "\$#" -lt 1 ]; then
-    echo "tail server logfile : \$0 <machine1> [ls options]"
+    echo "ls server data files : \$0 <machine1> [ls options]"
     return
    fi
    echo \$(ssh $SSHUSER@\$1 "echo \\\$(ls \${@:2} \\\$HIDOOP_HOME/data/)")
 
 }
 
+function help()
+{
+   echo 'nodels logtail logrm cmpref evalf'
+
+}
 
 
 

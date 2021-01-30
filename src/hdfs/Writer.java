@@ -165,9 +165,9 @@ public class Writer extends ClientServerTask<Long> {
 
                 // Init socket connection
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
+                hdfsSocket.setSoTimeout(60*1000); // Wait read for max 60 seconds
                 OutputStream os = hdfsSocket.getOutputStream();
                 InputStream is = hdfsSocket.getInputStream();
-
 
 
                 // Minimum nb of bytes sent is chunkSize or remaining size of file minus the ignored end of previous line

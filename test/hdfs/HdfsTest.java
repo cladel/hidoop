@@ -40,13 +40,12 @@ public class HdfsTest {
 
     @Test
     public void testGetSize(){
-        float f1 = 12;
+        long f1 = 12;
         Assert.assertEquals(12000000L, Constants.getSize(f1, "MB"));
         Assert.assertEquals(12L, Constants.getSize(f1, "B"));
         Assert.assertEquals(12000L, Constants.getSize(f1, "kB"));
         Assert.assertTrue(Constants.getSize(-f1, "B") < 0);
     }
-
 
 
 }

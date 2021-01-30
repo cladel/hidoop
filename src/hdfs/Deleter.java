@@ -72,6 +72,7 @@ public class Deleter extends ClientServerTask<Long> {
             try {
 
                 Socket hdfsSocket = new Socket(serverIp, Constants.PORT);
+                hdfsSocket.setSoTimeout(60*1000); // Wait read for max 60 seconds
                 OutputStream os = hdfsSocket.getOutputStream();
                 InputStream is = hdfsSocket.getInputStream();
 
