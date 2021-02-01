@@ -5,7 +5,7 @@
 # Except for :
 !.gitignore
 !README.md
-!hidoop.sh
+!hidoop
 !src/
 !src/hdfs/
 !src/formats/
