@@ -1,7 +1,7 @@
-Projet **HIDOOP**
+Plateforme **HIDOOP**
 =======================  
-![Language Java](https://img.shields.io/badge/language-Java-B07219)
-![Platform Linux](https://img.shields.io/badge/platform-Linux-red)
+![Language Java](https://img.shields.io/badge/Langage-Java-B07219)
+![Platform Linux](https://img.shields.io/badge/Platforme-Linux-red)
 
 **Hidoop est une plateforme destinée à l'exécution d'applications distribuées sur des clusters de machines.**
 
@@ -15,12 +15,10 @@ Pour commencer 📍
 ### Prérequis
 - L'application fonctionne sur Linux et utilise un terminal **bash**
 - Toutes les machines doivent être accessibles depuis le client via **SSH**
-- L'application utilise **Java** (1.8 et plus)
+- L'application utilise **Java** (> 1.8)
 
 ### Installation
 Pour commencer, définir une variable d'environnement **HIDOOP_HOME** (pointant sur le répertoire qui sera utilisé par hidoop) sur chaque machine où tournera l'application.  
-Sur la machine cliente, cloner le projet dans ce répertoire.
-
 ✏ Les classes sont considérées comme étant dans **$HIDOOP_HOME/src** par défaut, mais il est possible de définir une variable d'environnement **HIDOOP_CLASSES** qui indique la localisation des classes java de l'application.
 
 ### Configuration de Hidoop
@@ -40,8 +38,7 @@ Un fichier d'exemple est donné ci-dessous :
 ```  
 
 - **config** : l'attribut obligatoire _metadata_ est le nom du fichier de métadonnées qui sera créé.
-  * **default-chunk-size** : élément optionnel précisant la taille de chunk (entier) à utiliser par défaut dans HDFS. Si absent, cette taille est de 64MB.
-
+  * **default-chunk-size** : élément optionnel précisant la taille de chunk (entier) à utiliser par défaut dans HDFS. Si absent, cette taille est de 64MB.  
     ✏ Les unités de tailles supportées sont bytes, kB, MB, GB (non sensible à la casse). Par simplicité, une unité inconnue a le même effet que bytes.
 
   *  **servers** : liste des serveurs. L'attribut _ip_ d'un _node_ correspond soit à l'adresse ip de la machine soit à son nom (hostname). Cette liste ne peut pas être vide.
@@ -49,10 +46,11 @@ Un fichier d'exemple est donné ci-dessous :
 Utilisation de la plateforme 📚
 -----------------------  
 
-L'interaction avec l'application se fait par l'intermédiaire du script ***hidoop***.  
+La plateforme s'utilise via le script ***hidoop***.  
+Commande : `$ ./hidoop <ssh_username>`
+
 Au démarrage, ce shell charge le contenu du fichier de configuration *conf.xml*. Il permet d'interagir avec les machines du cluster via SSH.
 
-Commande : `$ ./hidoop <ssh_username>`
 
 ### Initialisation et déploiement
 Les commandes sont lancées sur la machine cliente après avoir cloné le projet dans **$HIDOOP_HOME** et créé le fichier de configuration.  
@@ -92,22 +90,22 @@ Dans le shell de l'application `hidoop`, il est possible de lancer les commandes
 
 ### Gestion des fichiers dans HDFS
 ⚠ Les commandes suivantes nécessitent que la plateforme soit en fonctionnement.
-- `hdfs -l [options]` pour lister les fichiers écrits dans HDFS.
+- `hdfs -l [options]` pour lister les fichiers écrits dans HDFS.  
+    Options :
+    * `--detail` pour des informations sur les chunks
 
-  Options :
-  * `--detail` pour des informations sur les chunks
 - `hdfs -w <localfilename> [options]` pour écrire un fichier dans HDFS  
   `<localfilename>` peut être un chemin absolu ou relatif à **$HIDOOP_HOME/data/**.  
-  Le fichier écrit dans HDFS aura le nom du fichier local.
+  Le fichier écrit dans HDFS aura le nom du fichier local.  
+    Options :
+    * `-f ln|kv` format du fichier (ln par défaut)
+    * `--chunks-size=<taille>` taille des chunks (ex : 100MB, 3kB...). Si aucune unité (B, kB, MB, GB, TB) n'est fournie, la valeur est en bytes. Si la valeur est négative, cet argument est ignoré.
+    * `--rep=<factor>` facteur de réplication des chunks (entier positif)
 
-  Options :
-  * `-f ln|kv` format du fichier (ln par défaut)
-  * `--chunks-size=<taille>` taille des chunks (ex : 100MB, 3kB...). Si aucune unité (B, kB, MB, GB, TB) n'est fournie, la valeur est en bytes. Si la valeur est négative, cet argument est ignoré.
-  * `--rep=<factor>` facteur de réplication des chunks (entier positif)
-- `hdfs -r <filename> [options]` pour lire un fichier stocké dans HDFS vers la machine locale.
+- `hdfs -r <filename> [options]` pour lire un fichier stocké dans HDFS vers la machine locale.  
+    Options :
+    * `<localfilename>` fichier local de destination. Le chemin peut être absolu ou relatif à **$HIDOOP_HOME/data/**. Le fichier est lu dans *r_&lt;filename&gt;* par défaut.
 
-  Options :
-  * `<localfilename>` fichier local de destination. Le chemin peut être absolu ou relatif à **$HIDOOP_HOME/data/**. Le fichier est lu dans *r_&lt;filename&gt;* par défaut.
 - `hdfs -d <filename>` pour supprimer un fichier de HDFS
 
 #### Format des fichiers
@@ -124,7 +122,9 @@ HDFS supporte 2 formats : ***Key-Value*** (*kv*) et ***Line*** (*ln*).
   La longueur des lignes ne doit donc pas être trop disparate. Si pour un fichier, une ligne dépasse 2 fois la taille d'un chunk, le fichier ne pourra pas être écrit.
 
 
+
 - ***Key-Value*** :
+
   > ville<->Toulouse    
   > école<->N7    
   > année<->2
@@ -133,13 +133,16 @@ HDFS supporte 2 formats : ***Key-Value*** (*kv*) et ***Line*** (*ln*).
 
 ### Lancement des applications MapReduce
 ⚠ Les commandes suivantes nécessitent que la plateforme soit en fonctionnement.
-- `mmr [options] <filename>` exécute l'application de comptage de mots ***MyMapReduce*** sur un fichier enregistré dans HDFS.  
-  Le fichier de résultats se nomme *&lt;filename&gt;-tot* et est au format *kv*.
 
-  Options :
-  * `-ip <address>` l'implémentation du MapReduce utilisant Java RMI, il peut être nécessaire de préciser quelle adresse ip transmettre depuis la JVM du client.
+La commande `launch <appname> [options] <filename>` permet de lancer une application de calcul MapReduce.  
+Options :
+* `-ip <address>` : l'implémentation du MapReduce utilisant Java RMI, il peut être nécessaire de préciser quelle adresse ip transmettre depuis la JVM du client. 
 
-### Supervision
+✏ `launch MyMapReduce [options] <filename>` exécute l'application de comptage de mots ***MyMapReduce*** sur un fichier enregistré dans HDFS.  
+Le fichier de résultats se nomme *&lt;filename&gt;-tot* et est au format *kv*.
+
+
+### Supervision et évaluation
 
 Dans le shell `hidoop-monitoring` (accessible via la commandes `monitoring`), on peut utiliser les commandes classiques de l'application et superviser l'application en plus des commandes suivantes :
 - `cmpref <file>` pour comparer un résultat de mmr avec sa version séquentielle sur un fichier
@@ -164,3 +167,10 @@ Lorsqu'un fichier est ajouté à HDFS, il est découpé en morceaux (chunks) et 
 ### Applications MapReduce
 
 Les applications de MapReduce utilisent RMI avec les serveurs distants pour lancer les calculs sur chaque chunk (phase Map) puis récupèrent les résultats intermédiaires et les combinent (phase Reduce).
+
+### Developpement
+
+Thomas Guillaud - 
+Axel Grunig -
+Nathan Razafimanantsoa -
+Chloe Laplagne
